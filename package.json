@@ -1,0 +1,25 @@
+{
+  "name": "3-shit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "babel-preset-es2015": "^6.14.0",
+    "babelify": "^7.3.0",
+    "glslify": "^5.0.0",
+    "postprocessing": "^1.1.4",
+    "three": "^0.80.1"
+  },
+  "devDependencies": {
+    "budo": "^9.0.0",
+    "canvas-loop": "^1.0.4",
+    "canvas-testbed": "^1.0.0",
+    "webgl-context": "^2.1.2"
+  },
+  "scripts": {
+    "start": "budo demo/index.js:bundle.js --live -- -t [babelify --presets es2015] -t glslify",
+    "test": "standard"
+  },
+  "author": "naoyashiga",
+  "license": "MIT"
+}

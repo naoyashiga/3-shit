@@ -8,7 +8,6 @@ import Line from './components/Line'
 
 const OrbitControls = require('three-orbit-controls')(THREE)
 
-
 class Viz {
   constructor() {
     this.w = window.innerWidth
@@ -31,8 +30,8 @@ class Viz {
 
     this.initGUI()
 
-    this.camera = new THREE.PerspectiveCamera( 45, this.w / this.h, 1, 4000 )
-    this.camera.position.z = 1750;
+    this.camera = new THREE.PerspectiveCamera(45, this.w / this.h, 1, 4000)
+    this.camera.position.z = 1750
 
     this.controls = new OrbitControls(this.camera, document.body)
 
@@ -71,16 +70,18 @@ class Viz {
       pointCloud.particles.setDrawRange( 0, this.particleCount )
 
     })
-
   }
 
   onWindowResize() {
+    const currentScreen = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    }
 
-    this.camera.aspect = this.w / this.h
+    this.camera.aspect = currentScreen.width / currentScreen.height
     this.camera.updateProjectionMatrix()
 
-    this.renderer.setSize(this.w, this.h)
-
+    this.renderer.setSize(currentScreen.width, currentScreen.height)
   }
 
   createBoxHelper() {
@@ -112,7 +113,7 @@ class Viz {
   }
 
   addResize() {
-    window.addEventListener('resize', this.onWindowResize, false)
+    window.addEventListener('resize', this.onWindowResize.bind(this), false)
   }
 
 

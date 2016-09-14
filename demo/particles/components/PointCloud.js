@@ -27,7 +27,7 @@ export default class PointCloud {
     this.particles.addAttribute('position', new THREE.BufferAttribute(this.positions, 3).setDynamic(true))
   }
 
-  addParticles(particles) {
+  getParticles(particles) {
     for (let i = 0; i < this.maxParticleCount; i++) {
       const p = new Particle()
 

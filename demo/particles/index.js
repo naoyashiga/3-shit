@@ -5,6 +5,7 @@ import dat from 'dat-gui'
 
 import Particle from './components/Particle'
 import PointCloud from './components/PointCloud'
+import Line from './components/Line'
 
 let OrbitControls = require('three-orbit-controls')(THREE)
 
@@ -13,9 +14,9 @@ let controls, stats
 let particles = []
 let camera, scene, renderer
 let positions, colors
-// let particles
 let pointCloud
-let linesMesh
+
+let line
 
 let maxParticleCount = 1000
 let particleCount = 500
@@ -29,7 +30,7 @@ let effectController = {
   limitConnections: false,
   maxConnections: 20,
   particleCount: 500
-};
+}
 
 init()
 animate()
@@ -39,7 +40,7 @@ function initGUI() {
   const gui = new dat.GUI()
 
   gui.add( effectController, "showDots" ).onChange( function( value ) { pointCloud.visible = value; })
-  gui.add( effectController, "showLines" ).onChange( function( value ) { linesMesh.visible = value; })
+  gui.add( effectController, "showLines" ).onChange( function( value ) { line.mesh.visible = value; })
   gui.add( effectController, "minDistance", 10, 300 )
   gui.add( effectController, "limitConnections" )
   gui.add( effectController, "maxConnections", 0, 30, 1 )
@@ -74,10 +75,10 @@ function init() {
   helper.material.transparent = true
   group.add(helper)
 
-  const segments = maxParticleCount * maxParticleCount
-
-  positions = new Float32Array(segments * 3)
-  colors = new Float32Array(segments * 3)
+  // const segments = maxParticleCount * maxParticleCount
+  //
+  // positions = new Float32Array(segments * 3)
+  // colors = new Float32Array(segments * 3)
 
   pointCloud = new PointCloud(maxParticleCount)
 
@@ -94,23 +95,24 @@ function init() {
   pointCloud.setup()
   group.add(pointCloud.cloud)
 
-  let geometry = new THREE.BufferGeometry()
-
-  geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3).setDynamic(true))
-  geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3).setDynamic(true))
-
-  geometry.computeBoundingSphere()
-
-  geometry.setDrawRange(0, 0)
-
-  const material = new THREE.LineBasicMaterial({
-    vertexColors: THREE.VertexColors,
-    blending: THREE.AdditiveBlending,
-    transparent: true
-  })
-
-  linesMesh = new THREE.LineSegments(geometry, material)
-  group.add(linesMesh)
+  // let geometry = new THREE.BufferGeometry()
+  //
+  // geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3).setDynamic(true))
+  // geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3).setDynamic(true))
+  //
+  // geometry.computeBoundingSphere()
+  //
+  // geometry.setDrawRange(0, 0)
+  //
+  // const material = new THREE.LineBasicMaterial({
+  //   vertexColors: THREE.VertexColors,
+  //   blending: THREE.AdditiveBlending,
+  //   transparent: true
+  // })
+  //
+  // line.mesh = new THREE.LineSegments(geometry, material)
+  line = new Line(maxParticleCount)
+  group.add(line.mesh)
 
   renderer = new THREE.WebGLRenderer({antialias: true})
   renderer.setPixelRatio(window.devicePixelRatio)
@@ -181,21 +183,10 @@ function animate() {
 
         let alpha = 1.0 - dist / effectController.minDistance
 
-        positions[ vertexpos++ ] = pointCloud.positions[ i * 3     ]
-        positions[ vertexpos++ ] = pointCloud.positions[ i * 3 + 1 ]
-        positions[ vertexpos++ ] = pointCloud.positions[ i * 3 + 2 ]
+        line.update(vertexpos, colorpos, alpha, p, q, i, j)
 
-        positions[ vertexpos++ ] = pointCloud.positions[ j * 3     ]
-        positions[ vertexpos++ ] = pointCloud.positions[ j * 3 + 1 ]
-        positions[ vertexpos++ ] = pointCloud.positions[ j * 3 + 2 ]
-
-        colors[ colorpos++ ] = alpha
-        colors[ colorpos++ ] = alpha
-        colors[ colorpos++ ] = alpha
-
-        colors[ colorpos++ ] = alpha
-        colors[ colorpos++ ] = alpha
-        colors[ colorpos++ ] = alpha
+        vertexpos += 6
+        colorpos += 6
 
         numConnected++
       }
@@ -203,9 +194,9 @@ function animate() {
   }
 
 
-  linesMesh.geometry.setDrawRange(0, numConnected * 2)
-  linesMesh.geometry.attributes.position.needsUpdate = true
-  linesMesh.geometry.attributes.color.needsUpdate = true
+  line.mesh.geometry.setDrawRange(0, numConnected * 2)
+  line.mesh.geometry.attributes.position.needsUpdate = true
+  line.mesh.geometry.attributes.color.needsUpdate = true
 
   pointCloud.cloud.geometry.attributes.position.needsUpdate = true
 
@@ -220,6 +211,6 @@ function render() {
 
   const time = Date.now() * 0.001
 
-  group.rotation.z = time * 0.1
+  group.rotation.y = time * 0.1
   renderer.render(scene, camera)
 }

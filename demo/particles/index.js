@@ -3,16 +3,18 @@ const THREE = require('three')
 import Stats from 'stats.js'
 import dat from 'dat-gui'
 
+import Particle from './components/Particle'
+import PointCloud from './components/PointCloud'
+
 let OrbitControls = require('three-orbit-controls')(THREE)
 
 let group
 let controls, stats
-let particlesData = []
+let particles = []
 let camera, scene, renderer
 let positions, colors
-let particles
+// let particles
 let pointCloud
-let particlePositions
 let linesMesh
 
 let maxParticleCount = 1000
@@ -44,7 +46,7 @@ function initGUI() {
   gui.add( effectController, "particleCount", 0, maxParticleCount, 1 ).onChange( function( value ) {
 
     particleCount = parseInt(value)
-    particles.setDrawRange( 0, particleCount )
+    pointCloud.particles.setDrawRange( 0, particleCount )
 
   })
 
@@ -77,39 +79,20 @@ function init() {
   positions = new Float32Array(segments * 3)
   colors = new Float32Array(segments * 3)
 
-  const pMaterial = new THREE.PointsMaterial({
-    color: 0xFFFFFF,
-    size: 3,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    sizeAttenuation: false
-  })
-
-  particles = new THREE.BufferGeometry()
-  particlePositions = new Float32Array(maxParticleCount * 3)
+  pointCloud = new PointCloud(maxParticleCount)
 
   for (let i = 0; i < maxParticleCount; i++) {
+    const p = new Particle()
 
-    let x = Math.random() * r - r / 2
-    let y = Math.random() * r - r / 2
-    let z = Math.random() * r - r / 2
+    pointCloud.positions[i * 3] = p.location.x
+    pointCloud.positions[i * 3 + 1] = p.location.y
+    pointCloud.positions[i * 3 + 2] = p.location.z
 
-    particlePositions[ i * 3     ] = x
-    particlePositions[ i * 3 + 1 ] = y
-    particlePositions[ i * 3 + 2 ] = z
-
-    particlesData.push({
-      velocity: new THREE.Vector3( -1 + Math.random() * 2, -1 + Math.random() * 2,  -1 + Math.random() * 2 ),
-      numConnections: 0
-    })
+    particles.push(p)
   }
 
-  particles.setDrawRange(0, particleCount)
-  particles.addAttribute('position', new THREE.BufferAttribute(particlePositions, 3).setDynamic(true))
-
-  // create the particle system
-  pointCloud = new THREE.Points(particles, pMaterial)
-  group.add(pointCloud)
+  pointCloud.setup()
+  group.add(pointCloud.cloud)
 
   let geometry = new THREE.BufferGeometry()
 
@@ -162,55 +145,49 @@ function animate() {
   let colorpos = 0;
   let numConnected = 0;
 
-  for(let i = 0; i < particleCount; i++) {
-    particlesData[ i ].numConnections = 0;
-  }
+  particles.forEach((p) => {
+    p.numConnections = 0
+  })
 
   for(let i = 0; i < particleCount; i++) {
 
-    let particleData = particlesData[i];
+    const p = particles[i];
 
-    particlePositions[ i * 3     ] += particleData.velocity.x;
-    particlePositions[ i * 3 + 1 ] += particleData.velocity.y;
-    particlePositions[ i * 3 + 2 ] += particleData.velocity.z;
+    p.update()
 
-    if ( particlePositions[ i * 3 + 1 ] < -rHalf || particlePositions[ i * 3 + 1 ] > rHalf )
-    particleData.velocity.y = -particleData.velocity.y;
+    pointCloud.positions[ i * 3     ] = p.location.x
+    pointCloud.positions[ i * 3 + 1 ] = p.location.y
+    pointCloud.positions[ i * 3 + 2 ] = p.location.z
 
-    if ( particlePositions[ i * 3 ] < -rHalf || particlePositions[ i * 3 ] > rHalf )
-    particleData.velocity.x = -particleData.velocity.x;
+    p.borders()
 
-    if ( particlePositions[ i * 3 + 2 ] < -rHalf || particlePositions[ i * 3 + 2 ] > rHalf )
-    particleData.velocity.z = -particleData.velocity.z;
-
-    if ( effectController.limitConnections && particleData.numConnections >= effectController.maxConnections )
+    if ( effectController.limitConnections && p.numConnections >= effectController.maxConnections )
     continue;
 
-    for ( let j = i + 1; j < particleCount; j++ ) {
+    for (let j = i + 1; j < particleCount; j++ ) {
 
-      let particleDataB = particlesData[ j ]
-      if ( effectController.limitConnections && particleDataB.numConnections >= effectController.maxConnections )
-      continue
+      const q = particles[j]
 
-      let dx = particlePositions[ i * 3     ] - particlePositions[ j * 3     ]
-      let dy = particlePositions[ i * 3 + 1 ] - particlePositions[ j * 3 + 1 ]
-      let dz = particlePositions[ i * 3 + 2 ] - particlePositions[ j * 3 + 2 ]
-      let dist = Math.sqrt( dx * dx + dy * dy + dz * dz )
+      if ( effectController.limitConnections && q.numConnections >= effectController.maxConnections ) {
+        continue
+      }
+
+      const dist = p.location.distanceTo(q.location)
 
       if (dist < effectController.minDistance) {
 
-        particleData.numConnections++
-        particleDataB.numConnections++
+        p.numConnections++
+        q.numConnections++
 
         let alpha = 1.0 - dist / effectController.minDistance
 
-        positions[ vertexpos++ ] = particlePositions[ i * 3     ]
-        positions[ vertexpos++ ] = particlePositions[ i * 3 + 1 ]
-        positions[ vertexpos++ ] = particlePositions[ i * 3 + 2 ]
+        positions[ vertexpos++ ] = pointCloud.positions[ i * 3     ]
+        positions[ vertexpos++ ] = pointCloud.positions[ i * 3 + 1 ]
+        positions[ vertexpos++ ] = pointCloud.positions[ i * 3 + 2 ]
 
-        positions[ vertexpos++ ] = particlePositions[ j * 3     ]
-        positions[ vertexpos++ ] = particlePositions[ j * 3 + 1 ]
-        positions[ vertexpos++ ] = particlePositions[ j * 3 + 2 ]
+        positions[ vertexpos++ ] = pointCloud.positions[ j * 3     ]
+        positions[ vertexpos++ ] = pointCloud.positions[ j * 3 + 1 ]
+        positions[ vertexpos++ ] = pointCloud.positions[ j * 3 + 2 ]
 
         colors[ colorpos++ ] = alpha
         colors[ colorpos++ ] = alpha
@@ -230,7 +207,7 @@ function animate() {
   linesMesh.geometry.attributes.position.needsUpdate = true
   linesMesh.geometry.attributes.color.needsUpdate = true
 
-  pointCloud.geometry.attributes.position.needsUpdate = true
+  pointCloud.cloud.geometry.attributes.position.needsUpdate = true
 
   requestAnimationFrame(animate)
 

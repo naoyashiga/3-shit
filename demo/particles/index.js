@@ -3,7 +3,6 @@ const THREE = require('three')
 import Stats from 'stats.js'
 import dat from 'dat-gui'
 
-import Particle from './components/Particle'
 import PointCloud from './components/PointCloud'
 import Line from './components/Line'
 
@@ -37,49 +36,24 @@ class Viz {
 
     this.controls = new OrbitControls(this.camera, document.body)
 
-    const helper = new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(this.r, this.r, this.r)))
-    helper.material.color.setHex(0x080808)
-    helper.material.blending = THREE.AdditiveBlending
-    helper.material.transparent = true
-    this.group.add(helper)
-
     this.scene = new THREE.Scene()
-
-
     this.scene.add(this.group)
 
     this.pointCloud = new PointCloud(this.maxParticleCount)
-
-    for (let i = 0; i < this.maxParticleCount; i++) {
-      const p = new Particle()
-
-      this.pointCloud.positions[i * 3] = p.location.x
-      this.pointCloud.positions[i * 3 + 1] = p.location.y
-      this.pointCloud.positions[i * 3 + 2] = p.location.z
-
-      this.particles.push(p)
-    }
-
+    this.particles = this.pointCloud.getParticles(this.particles)
     this.pointCloud.setup()
-    this.group.add(this.pointCloud.cloud)
 
     this.line = new Line(this.maxParticleCount)
-    this.group.add(this.line.mesh)
+
+    this.addToGroup()
 
     this.renderer = new THREE.WebGLRenderer({antialias: true})
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.setSize(this.w, this.h)
-
-    this.renderer.gammaInput = true
-    this.renderer.gammaOutput = true
-
-    document.body.appendChild(this.renderer.domElement)
+    this.addRenderer()
 
     this.stats = new Stats()
-    document.body.appendChild(this.stats.dom)
+    this.addStats()
 
-    window.addEventListener('resize', this.onWindowResize, false)
-
+    this.addResize()
   }
 
   initGUI() {
@@ -108,6 +82,40 @@ class Viz {
     this.renderer.setSize(this.w, this.h)
 
   }
+
+  createBoxHelper() {
+    const helper = new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(this.r, this.r, this.r)))
+    helper.material.color.setHex(0x080808)
+    helper.material.blending = THREE.AdditiveBlending
+    helper.material.transparent = true
+
+    return helper
+  }
+
+  addToGroup() {
+    this.group.add(this.createBoxHelper())
+    this.group.add(this.pointCloud.cloud)
+    this.group.add(this.line.mesh)
+  }
+
+  addRenderer() {
+    this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.renderer.setSize(this.w, this.h)
+
+    this.renderer.gammaInput = true
+    this.renderer.gammaOutput = true
+    document.body.appendChild(this.renderer.domElement)
+  }
+
+  addStats() {
+    document.body.appendChild(this.stats.dom)
+  }
+
+  addResize() {
+    window.addEventListener('resize', this.onWindowResize, false)
+  }
+
+
 
   animate() {
 

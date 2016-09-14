@@ -7,210 +7,183 @@ import Particle from './components/Particle'
 import PointCloud from './components/PointCloud'
 import Line from './components/Line'
 
-let OrbitControls = require('three-orbit-controls')(THREE)
+const OrbitControls = require('three-orbit-controls')(THREE)
 
-let group
-let controls, stats
-let particles = []
-let camera, scene, renderer
-let positions, colors
-let pointCloud
 
-let line
+class Viz {
+  constructor() {
+    this.w = window.innerWidth
+    this.h = window.innerHeight
+    this.particleCount = 500
+    this.maxParticleCount = 1000
+    this.particles = []
+    this.r = 800
 
-let maxParticleCount = 1000
-let particleCount = 500
-let r = 800
-let rHalf = r / 2
+    this.group = new THREE.Group()
 
-let effectController = {
-  showDots: true,
-  showLines: true,
-  minDistance: 150,
-  limitConnections: false,
-  maxConnections: 20,
-  particleCount: 500
-}
+    this.effectController = {
+      showDots: true,
+      showLines: true,
+      minDistance: 150,
+      limitConnections: false,
+      maxConnections: 20,
+      particleCount: 500
+    }
 
-init()
-animate()
+    this.initGUI()
 
-function initGUI() {
+    this.camera = new THREE.PerspectiveCamera( 45, this.w / this.h, 1, 4000 )
+    this.camera.position.z = 1750;
 
-  const gui = new dat.GUI()
+    this.controls = new OrbitControls(this.camera, document.body)
 
-  gui.add( effectController, "showDots" ).onChange( function( value ) { pointCloud.visible = value; })
-  gui.add( effectController, "showLines" ).onChange( function( value ) { line.mesh.visible = value; })
-  gui.add( effectController, "minDistance", 10, 300 )
-  gui.add( effectController, "limitConnections" )
-  gui.add( effectController, "maxConnections", 0, 30, 1 )
-  gui.add( effectController, "particleCount", 0, maxParticleCount, 1 ).onChange( function( value ) {
+    const helper = new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(this.r, this.r, this.r)))
+    helper.material.color.setHex(0x080808)
+    helper.material.blending = THREE.AdditiveBlending
+    helper.material.transparent = true
+    this.group.add(helper)
 
-    particleCount = parseInt(value)
-    pointCloud.particles.setDrawRange( 0, particleCount )
+    this.scene = new THREE.Scene()
 
-  })
 
-}
+    this.scene.add(this.group)
 
-function init() {
-  const w = window.innerWidth
-  const h = window.innerHeight
+    this.pointCloud = new PointCloud(this.maxParticleCount)
 
-  initGUI()
+    for (let i = 0; i < this.maxParticleCount; i++) {
+      const p = new Particle()
 
-  camera = new THREE.PerspectiveCamera( 45, w / h, 1, 4000 )
-  camera.position.z = 1750;
+      this.pointCloud.positions[i * 3] = p.location.x
+      this.pointCloud.positions[i * 3 + 1] = p.location.y
+      this.pointCloud.positions[i * 3 + 2] = p.location.z
 
-  controls = new OrbitControls(camera, document.body)
+      this.particles.push(p)
+    }
 
-  scene = new THREE.Scene()
+    this.pointCloud.setup()
+    this.group.add(this.pointCloud.cloud)
 
-  group = new THREE.Group()
-  scene.add(group)
+    this.line = new Line(this.maxParticleCount)
+    this.group.add(this.line.mesh)
 
-  const helper = new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(r, r, r)))
-  helper.material.color.setHex(0x080808)
-  helper.material.blending = THREE.AdditiveBlending
-  helper.material.transparent = true
-  group.add(helper)
+    this.renderer = new THREE.WebGLRenderer({antialias: true})
+    this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.renderer.setSize(this.w, this.h)
 
-  // const segments = maxParticleCount * maxParticleCount
-  //
-  // positions = new Float32Array(segments * 3)
-  // colors = new Float32Array(segments * 3)
+    this.renderer.gammaInput = true
+    this.renderer.gammaOutput = true
 
-  pointCloud = new PointCloud(maxParticleCount)
+    document.body.appendChild(this.renderer.domElement)
 
-  for (let i = 0; i < maxParticleCount; i++) {
-    const p = new Particle()
+    this.stats = new Stats()
+    document.body.appendChild(this.stats.dom)
 
-    pointCloud.positions[i * 3] = p.location.x
-    pointCloud.positions[i * 3 + 1] = p.location.y
-    pointCloud.positions[i * 3 + 2] = p.location.z
+    window.addEventListener('resize', this.onWindowResize, false)
 
-    particles.push(p)
   }
 
-  pointCloud.setup()
-  group.add(pointCloud.cloud)
+  initGUI() {
 
-  // let geometry = new THREE.BufferGeometry()
-  //
-  // geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3).setDynamic(true))
-  // geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3).setDynamic(true))
-  //
-  // geometry.computeBoundingSphere()
-  //
-  // geometry.setDrawRange(0, 0)
-  //
-  // const material = new THREE.LineBasicMaterial({
-  //   vertexColors: THREE.VertexColors,
-  //   blending: THREE.AdditiveBlending,
-  //   transparent: true
-  // })
-  //
-  // line.mesh = new THREE.LineSegments(geometry, material)
-  line = new Line(maxParticleCount)
-  group.add(line.mesh)
+    const gui = new dat.GUI()
 
-  renderer = new THREE.WebGLRenderer({antialias: true})
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.setSize(w, h)
+    gui.add(this.effectController, "showDots").onChange(function( value ) { this.pointCloud.visible = value; })
+    gui.add(this.effectController, "showLines" ).onChange( function( value ) { this.line.mesh.visible = value; })
+    gui.add(this.effectController, "minDistance", 10, 300 )
+    gui.add(this.effectController, "limitConnections" )
+    gui.add(this.effectController, "maxConnections", 0, 30, 1 )
+    gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1 ).onChange( function( value ) {
 
-  renderer.gammaInput = true
-  renderer.gammaOutput = true
+      this.particleCount = parseInt(value)
+      pointCloud.particles.setDrawRange( 0, this.particleCount )
 
-  document.body.appendChild(renderer.domElement)
+    })
 
-  stats = new Stats()
-  document.body.appendChild(stats.dom)
+  }
 
-  window.addEventListener('resize', onWindowResize, false)
+  onWindowResize() {
 
-}
+    this.camera.aspect = this.w / this.h
+    this.camera.updateProjectionMatrix()
 
-function onWindowResize() {
-  const w = window.innerWidth
-  const h = window.innerHeight
+    this.renderer.setSize(this.w, this.h)
 
-  camera.aspect = w / h
-  camera.updateProjectionMatrix()
+  }
 
-  renderer.setSize(w, h)
+  animate() {
 
-}
+    let vertexpos = 0;
+    let colorpos = 0;
+    let numConnected = 0;
 
-function animate() {
+    this.particles.forEach((p) => {
+      p.numConnections = 0
+    })
 
-  let vertexpos = 0;
-  let colorpos = 0;
-  let numConnected = 0;
+    for(let i = 0; i < this.particleCount; i++) {
 
-  particles.forEach((p) => {
-    p.numConnections = 0
-  })
+      const p = this.particles[i]
 
-  for(let i = 0; i < particleCount; i++) {
+      p.update()
 
-    const p = particles[i];
+      this.pointCloud.positions[i * 3] = p.location.x
+      this.pointCloud.positions[i * 3 + 1] = p.location.y
+      this.pointCloud.positions[i * 3 + 2] = p.location.z
 
-    p.update()
+      p.borders()
 
-    pointCloud.positions[ i * 3     ] = p.location.x
-    pointCloud.positions[ i * 3 + 1 ] = p.location.y
-    pointCloud.positions[ i * 3 + 2 ] = p.location.z
-
-    p.borders()
-
-    if ( effectController.limitConnections && p.numConnections >= effectController.maxConnections )
-    continue;
-
-    for (let j = i + 1; j < particleCount; j++ ) {
-
-      const q = particles[j]
-
-      if ( effectController.limitConnections && q.numConnections >= effectController.maxConnections ) {
+      if (this.effectController.limitConnections && p.numConnections >= this.effectController.maxConnections ) {
         continue
       }
 
-      const dist = p.location.distanceTo(q.location)
+      for (let j = i + 1; j < this.particleCount; j++ ) {
 
-      if (dist < effectController.minDistance) {
+        const q = this.particles[j]
 
-        p.numConnections++
-        q.numConnections++
+        if (this.effectController.limitConnections && q.numConnections >= this.effectController.maxConnections) {
+          continue
+        }
 
-        let alpha = 1.0 - dist / effectController.minDistance
+        const dist = p.location.distanceTo(q.location)
 
-        line.update(vertexpos, colorpos, alpha, p, q, i, j)
+        if (dist < this.effectController.minDistance) {
 
-        vertexpos += 6
-        colorpos += 6
+          p.numConnections++
+          q.numConnections++
 
-        numConnected++
+          let alpha = 1.0 - dist / this.effectController.minDistance
+
+          this.line.update(vertexpos, colorpos, alpha, p, q, i, j)
+
+          vertexpos += 6
+          colorpos += 6
+
+          numConnected++
+        }
       }
     }
+
+
+    this.line.mesh.geometry.setDrawRange(0, numConnected * 2)
+    this.line.mesh.geometry.attributes.position.needsUpdate = true
+    this.line.mesh.geometry.attributes.color.needsUpdate = true
+
+    this.pointCloud.cloud.geometry.attributes.position.needsUpdate = true
+
+    requestAnimationFrame(this.animate.bind(this))
+
+    this.stats.update()
+    this.render()
+
   }
 
+  render() {
+    const time = Date.now() * 0.001
 
-  line.mesh.geometry.setDrawRange(0, numConnected * 2)
-  line.mesh.geometry.attributes.position.needsUpdate = true
-  line.mesh.geometry.attributes.color.needsUpdate = true
-
-  pointCloud.cloud.geometry.attributes.position.needsUpdate = true
-
-  requestAnimationFrame(animate)
-
-  stats.update()
-  render()
-
+    this.group.rotation.y = time * 0.1
+    this.renderer.render(this.scene, this.camera)
+  }
 }
 
-function render() {
+let viz = new Viz()
 
-  const time = Date.now() * 0.001
-
-  group.rotation.y = time * 0.1
-  renderer.render(scene, camera)
-}
+viz.animate()

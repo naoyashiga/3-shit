@@ -235,12 +235,9 @@ var Viz = function () {
       showDots: true,
       showLines: true,
       minDistance: 100,
-      limitConnections: false,
       maxConnections: 20,
       particleCount: 500
     };
-
-    this.initGUI();
 
     this.camera = new THREE.PerspectiveCamera(45, this.w / this.h, 1, 4000);
     this.camera.position.z = 1750;
@@ -261,6 +258,8 @@ var Viz = function () {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.addRenderer();
 
+    this.initGUI();
+
     this.stats = new _stats2.default();
     this.addStats();
 
@@ -270,22 +269,25 @@ var Viz = function () {
   _createClass(Viz, [{
     key: 'initGUI',
     value: function initGUI() {
+      var _this = this;
 
       var gui = new _datGui2.default.GUI();
 
       gui.add(this.effectController, "showDots").onChange(function (value) {
-        this.pointCloud.visible = value;
+        _this.pointCloud.cloud.visible = value;
       });
+
       gui.add(this.effectController, "showLines").onChange(function (value) {
-        this.line.mesh.visible = value;
+        _this.line.mesh.visible = value;
       });
+
       gui.add(this.effectController, "minDistance", 10, 300);
-      gui.add(this.effectController, "limitConnections");
       gui.add(this.effectController, "maxConnections", 0, 30, 1);
+
       gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1).onChange(function (value) {
 
-        this.particleCount = parseInt(value);
-        pointCloud.particles.setDrawRange(0, this.particleCount);
+        _this.particleCount = parseInt(value);
+        _this.pointCloud.particles.setDrawRange(0, _this.particleCount);
       });
     }
   }, {
@@ -363,7 +365,7 @@ var Viz = function () {
 
         p.borders();
 
-        if (this.effectController.limitConnections && p.numConnections >= this.effectController.maxConnections) {
+        if (p.numConnections >= this.effectController.maxConnections) {
           continue;
         }
 
@@ -371,7 +373,7 @@ var Viz = function () {
 
           var q = this.particles[j];
 
-          if (this.effectController.limitConnections && q.numConnections >= this.effectController.maxConnections) {
+          if (q.numConnections >= this.effectController.maxConnections) {
             continue;
           }
 

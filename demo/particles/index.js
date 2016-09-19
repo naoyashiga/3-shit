@@ -23,12 +23,10 @@ class Viz {
       showDots: true,
       showLines: true,
       minDistance: 100,
-      limitConnections: false,
       maxConnections: 20,
       particleCount: 500
     }
 
-    this.initGUI()
 
     this.camera = new THREE.PerspectiveCamera(45, this.w / this.h, 1, 4000)
     this.camera.position.z = 1750
@@ -49,6 +47,8 @@ class Viz {
     this.renderer = new THREE.WebGLRenderer({antialias: true})
     this.addRenderer()
 
+    this.initGUI()
+
     this.stats = new Stats()
     this.addStats()
 
@@ -59,15 +59,17 @@ class Viz {
 
     const gui = new dat.GUI()
 
-    gui.add(this.effectController, "showDots").onChange(function( value ) { this.pointCloud.visible = value; })
-    gui.add(this.effectController, "showLines" ).onChange( function( value ) { this.line.mesh.visible = value; })
+    gui.add(this.effectController, "showDots").onChange((value) => { this.pointCloud.cloud.visible = value; })
+
+    gui.add(this.effectController, "showLines" ).onChange((value) => { this.line.mesh.visible = value; })
+
     gui.add(this.effectController, "minDistance", 10, 300 )
-    gui.add(this.effectController, "limitConnections" )
-    gui.add(this.effectController, "maxConnections", 0, 30, 1 )
-    gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1 ).onChange( function( value ) {
+    gui.add(this.effectController, "maxConnections", 0, 30, 1)
+
+    gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1).onChange((value) => {
 
       this.particleCount = parseInt(value)
-      pointCloud.particles.setDrawRange( 0, this.particleCount )
+      this.pointCloud.particles.setDrawRange(0, this.particleCount)
 
     })
   }
@@ -141,7 +143,7 @@ class Viz {
 
       p.borders()
 
-      if (this.effectController.limitConnections && p.numConnections >= this.effectController.maxConnections ) {
+      if (p.numConnections >= this.effectController.maxConnections ) {
         continue
       }
 
@@ -149,7 +151,7 @@ class Viz {
 
         const q = this.particles[j]
 
-        if (this.effectController.limitConnections && q.numConnections >= this.effectController.maxConnections) {
+        if (q.numConnections >= this.effectController.maxConnections) {
           continue
         }
 

@@ -12,7 +12,7 @@ class Viz {
   constructor() {
     this.w = window.innerWidth
     this.h = window.innerHeight
-    this.particleCount = 500
+    this.particleCount = 300
     this.maxParticleCount = 1000
     this.particles = []
     this.r = 800

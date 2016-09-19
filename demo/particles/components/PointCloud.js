@@ -22,7 +22,7 @@ export default class PointCloud {
   }
 
   setup() {
-    const particleCount = 500
+    const particleCount = 300
     this.particles.setDrawRange(0, particleCount)
     this.particles.addAttribute('position', new THREE.BufferAttribute(this.positions, 3).setDynamic(true))
   }

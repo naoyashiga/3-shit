@@ -1,3983 +1,5973 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-"use strict";
+'use strict';
 
-var _postprocessing = require("postprocessing");
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var THREE = require('three');
 
+var Line = function () {
+  function Line(maxParticleCount) {
+    _classCallCheck(this, Line);
 
-var camera = void 0,
-    scene = void 0,
-    renderer = void 0,
-    composer = void 0;
-var object = void 0,
-    light = void 0;
+    var segments = maxParticleCount * maxParticleCount;
 
-var glitchPass = void 0,
-    cube = void 0;
+    this.positions = new Float32Array(segments * 3);
+    this.colors = new Float32Array(segments * 3);
 
-init();
-animate();
+    this.material = new THREE.LineBasicMaterial({
+      vertexColors: THREE.VertexColors,
+      blending: THREE.AdditiveBlending,
+      transparent: true
+    });
 
-function init() {
-  var w = window.innerWidth;
-  var h = window.innerHeight;
+    this.geometry = new THREE.BufferGeometry();
 
-  renderer = new THREE.WebGLRenderer();
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(w, h);
-  document.body.appendChild(renderer.domElement);
+    this.geometry.addAttribute('position', new THREE.BufferAttribute(this.positions, 3).setDynamic(true));
+    this.geometry.addAttribute('color', new THREE.BufferAttribute(this.colors, 3).setDynamic(true));
 
-  camera = new THREE.PerspectiveCamera(70, w / h, 1, 1000);
-  camera.position.z = 400;
+    this.geometry.computeBoundingSphere();
 
-  scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x000000, 1, 1000);
+    this.geometry.setDrawRange(0, 0);
 
-  // object = new THREE.Object3D()
+    this.mesh = new THREE.LineSegments(this.geometry, this.material);
+  }
 
-  var geometry = new THREE.BoxGeometry(h / 2, h / 4, 100);
-  var emoji = new THREE.TextureLoader().load("./poop.png");
+  _createClass(Line, [{
+    key: 'update',
+    value: function update(vertexpos, colorpos, alpha, p, q, i, j) {
 
-  var material = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    map: emoji
-  });
+      this.positions[vertexpos++] = p.location.x;
+      this.positions[vertexpos++] = p.location.y;
+      this.positions[vertexpos++] = p.location.z;
 
-  cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
+      this.positions[vertexpos++] = q.location.x;
+      this.positions[vertexpos++] = q.location.y;
+      this.positions[vertexpos++] = q.location.z;
 
-  scene.add(new THREE.AmbientLight(0x222222));
+      this.colors[colorpos++] = alpha;
+      this.colors[colorpos++] = alpha;
+      this.colors[colorpos++] = alpha;
 
-  light = new THREE.DirectionalLight(0xffffff);
-  light.position.set(1, 1, 1);
-  scene.add(light);
+      this.colors[colorpos++] = alpha;
+      this.colors[colorpos++] = alpha;
+      this.colors[colorpos++] = alpha;
+    }
+  }]);
 
-  composer = new _postprocessing.EffectComposer(renderer);
-  composer.addPass(new _postprocessing.RenderPass(scene, camera));
+  return Line;
+}();
 
-  glitchPass = new _postprocessing.GlitchPass();
-  glitchPass.renderToScreen = true;
-  composer.addPass(glitchPass);
+exports.default = Line;
 
-  window.addEventListener("resize", onWindowResize, false);
-}
+},{"three":10}],2:[function(require,module,exports){
+'use strict';
 
-function onWindowResize() {
-  var w = window.innerWidth;
-  var h = window.innerHeight;
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 
-  renderer.setSize(w, h);
-  composer.setSize(w, h);
-}
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-function animate() {
-  requestAnimationFrame(animate);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-  var time = Date.now();
+var THREE = require('three');
 
-  composer.render();
-}
+var Particle = function () {
+  function Particle() {
+    _classCallCheck(this, Particle);
 
-},{"postprocessing":2,"three":3}],2:[function(require,module,exports){
+    this.radius = 800;
+
+    this.location = new THREE.Vector3(Math.random() * this.radius - this.radius / 2, Math.random() * this.radius - this.radius / 2, Math.random() * this.radius - this.radius / 2);
+
+    this.velocity = new THREE.Vector3(-1 + Math.random() * 2, -1 + Math.random() * 2, -1 + Math.random() * 2);
+
+    this.numConnections = 0;
+  }
+
+  _createClass(Particle, [{
+    key: 'update',
+    value: function update() {
+      this.location.add(this.velocity);
+    }
+  }, {
+    key: 'borders',
+    value: function borders() {
+      var rHalf = this.radius / 2;
+      if (this.location.y < -rHalf || this.location.y > rHalf) {
+        this.velocity.y *= -1;
+      }
+
+      if (this.location.x < -rHalf || this.location.x > rHalf) {
+        this.velocity.x *= -1;
+      }
+
+      if (this.location.z < -rHalf || this.location.z > rHalf) {
+        this.velocity.z *= -1;
+      }
+    }
+  }]);
+
+  return Particle;
+}();
+
+exports.default = Particle;
+
+},{"three":10}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Particle = require('./Particle');
+
+var _Particle2 = _interopRequireDefault(_Particle);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var THREE = require('three');
+
+var PointCloud = function () {
+  function PointCloud(maxParticleCount) {
+    _classCallCheck(this, PointCloud);
+
+    this.maxParticleCount = maxParticleCount;
+
+    this.positions = new Float32Array(maxParticleCount * 3);
+    this.particles = new THREE.BufferGeometry();
+
+    this.material = new THREE.PointsMaterial({
+      color: 0xFFFFFF,
+      size: 3,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      sizeAttenuation: false
+    });
+
+    this.cloud = new THREE.Points(this.particles, this.material);
+  }
+
+  _createClass(PointCloud, [{
+    key: 'setup',
+    value: function setup() {
+      var particleCount = 300;
+      this.particles.setDrawRange(0, particleCount);
+      this.particles.addAttribute('position', new THREE.BufferAttribute(this.positions, 3).setDynamic(true));
+    }
+  }, {
+    key: 'getParticles',
+    value: function getParticles(particles) {
+      for (var i = 0; i < this.maxParticleCount; i++) {
+        var p = new _Particle2.default();
+
+        this.positions[i * 3] = p.location.x;
+        this.positions[i * 3 + 1] = p.location.y;
+        this.positions[i * 3 + 2] = p.location.z;
+
+        particles.push(p);
+      }
+
+      return particles;
+    }
+  }]);
+
+  return PointCloud;
+}();
+
+exports.default = PointCloud;
+
+},{"./Particle":2,"three":10}],4:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _stats = require('stats.js');
+
+var _stats2 = _interopRequireDefault(_stats);
+
+var _datGui = require('dat-gui');
+
+var _datGui2 = _interopRequireDefault(_datGui);
+
+var _PointCloud = require('./components/PointCloud');
+
+var _PointCloud2 = _interopRequireDefault(_PointCloud);
+
+var _Line = require('./components/Line');
+
+var _Line2 = _interopRequireDefault(_Line);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var THREE = require('three');
+
+var OrbitControls = require('three-orbit-controls')(THREE);
+
+var Viz = function () {
+  function Viz() {
+    _classCallCheck(this, Viz);
+
+    this.w = window.innerWidth;
+    this.h = window.innerHeight;
+    this.particleCount = 300;
+    this.maxParticleCount = 1000;
+    this.particles = [];
+    this.r = 800;
+
+    this.group = new THREE.Group();
+
+    this.effectController = {
+      showDots: true,
+      showLines: true,
+      minDistance: 150,
+      limitConnections: false,
+      maxConnections: 20,
+      particleCount: 500
+    };
+
+    this.initGUI();
+
+    this.camera = new THREE.PerspectiveCamera(45, this.w / this.h, 1, 4000);
+    this.camera.position.z = 1750;
+
+    this.controls = new OrbitControls(this.camera, document.body);
+
+    this.scene = new THREE.Scene();
+    this.scene.add(this.group);
+
+    this.pointCloud = new _PointCloud2.default(this.maxParticleCount);
+    this.particles = this.pointCloud.getParticles(this.particles);
+    this.pointCloud.setup();
+
+    this.line = new _Line2.default(this.maxParticleCount);
+
+    this.addToGroup();
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.addRenderer();
+
+    this.stats = new _stats2.default();
+    this.addStats();
+
+    this.addResize();
+  }
+
+  _createClass(Viz, [{
+    key: 'initGUI',
+    value: function initGUI() {
+
+      var gui = new _datGui2.default.GUI();
+
+      gui.add(this.effectController, "showDots").onChange(function (value) {
+        this.pointCloud.visible = value;
+      });
+      gui.add(this.effectController, "showLines").onChange(function (value) {
+        this.line.mesh.visible = value;
+      });
+      gui.add(this.effectController, "minDistance", 10, 300);
+      gui.add(this.effectController, "limitConnections");
+      gui.add(this.effectController, "maxConnections", 0, 30, 1);
+      gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1).onChange(function (value) {
+
+        this.particleCount = parseInt(value);
+        pointCloud.particles.setDrawRange(0, this.particleCount);
+      });
+    }
+  }, {
+    key: 'onWindowResize',
+    value: function onWindowResize() {
+      var currentScreen = {
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+
+      this.camera.aspect = currentScreen.width / currentScreen.height;
+      this.camera.updateProjectionMatrix();
+
+      this.renderer.setSize(currentScreen.width, currentScreen.height);
+    }
+  }, {
+    key: 'createBoxHelper',
+    value: function createBoxHelper() {
+      var helper = new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(this.r, this.r, this.r)));
+      helper.material.color.setHex(0x080808);
+      helper.material.blending = THREE.AdditiveBlending;
+      helper.material.transparent = true;
+
+      return helper;
+    }
+  }, {
+    key: 'addToGroup',
+    value: function addToGroup() {
+      this.group.add(this.createBoxHelper());
+      this.group.add(this.pointCloud.cloud);
+      this.group.add(this.line.mesh);
+    }
+  }, {
+    key: 'addRenderer',
+    value: function addRenderer() {
+      this.renderer.setPixelRatio(window.devicePixelRatio);
+      this.renderer.setSize(this.w, this.h);
+
+      this.renderer.gammaInput = true;
+      this.renderer.gammaOutput = true;
+      document.body.appendChild(this.renderer.domElement);
+    }
+  }, {
+    key: 'addStats',
+    value: function addStats() {
+      document.body.appendChild(this.stats.dom);
+    }
+  }, {
+    key: 'addResize',
+    value: function addResize() {
+      window.addEventListener('resize', this.onWindowResize.bind(this), false);
+    }
+  }, {
+    key: 'animate',
+    value: function animate() {
+
+      var vertexpos = 0;
+      var colorpos = 0;
+      var numConnected = 0;
+
+      this.particles.forEach(function (p) {
+        p.numConnections = 0;
+      });
+
+      for (var i = 0; i < this.particleCount; i++) {
+
+        var p = this.particles[i];
+
+        p.update();
+
+        this.pointCloud.positions[i * 3] = p.location.x;
+        this.pointCloud.positions[i * 3 + 1] = p.location.y;
+        this.pointCloud.positions[i * 3 + 2] = p.location.z;
+
+        p.borders();
+
+        if (this.effectController.limitConnections && p.numConnections >= this.effectController.maxConnections) {
+          continue;
+        }
+
+        for (var j = i + 1; j < this.particleCount; j++) {
+
+          var q = this.particles[j];
+
+          if (this.effectController.limitConnections && q.numConnections >= this.effectController.maxConnections) {
+            continue;
+          }
+
+          var dist = p.location.distanceTo(q.location);
+
+          if (dist < this.effectController.minDistance) {
+
+            p.numConnections++;
+            q.numConnections++;
+
+            var alpha = 1.0 - dist / this.effectController.minDistance;
+
+            this.line.update(vertexpos, colorpos, alpha, p, q, i, j);
+
+            vertexpos += 6;
+            colorpos += 6;
+
+            numConnected++;
+          }
+        }
+      }
+
+      this.line.mesh.geometry.setDrawRange(0, numConnected * 2);
+      this.line.mesh.geometry.attributes.position.needsUpdate = true;
+      this.line.mesh.geometry.attributes.color.needsUpdate = true;
+
+      this.pointCloud.cloud.geometry.attributes.position.needsUpdate = true;
+
+      requestAnimationFrame(this.animate.bind(this));
+
+      this.stats.update();
+      this.render();
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var time = Date.now() * 0.001;
+
+      this.group.rotation.y = time * 0.1;
+      this.renderer.render(this.scene, this.camera);
+    }
+  }]);
+
+  return Viz;
+}();
+
+var viz = new Viz();
+
+viz.animate();
+
+},{"./components/Line":1,"./components/PointCloud":3,"dat-gui":5,"stats.js":8,"three":10,"three-orbit-controls":9}],5:[function(require,module,exports){
+module.exports = require('./vendor/dat.gui')
+module.exports.color = require('./vendor/dat.color')
+},{"./vendor/dat.color":6,"./vendor/dat.gui":7}],6:[function(require,module,exports){
 /**
- * postprocessing v1.1.4 build Aug 23 2016
- * https://github.com/vanruesc/postprocessing
- * Copyright 2016 Raoul van Rüschen, Zlib
+ * dat-gui JavaScript Controller Library
+ * http://code.google.com/p/dat-gui
+ *
+ * Copyright 2011 Data Arts Team, Google Creative Lab
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-(function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('three')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'three'], factory) :
-  (factory((global.POSTPROCESSING = global.POSTPROCESSING || {}),global.THREE));
-}(this, (function (exports,THREE) { 'use strict';
+/** @namespace */
+var dat = module.exports = dat || {};
 
-  THREE = 'default' in THREE ? THREE['default'] : THREE;
+/** @namespace */
+dat.color = dat.color || {};
 
-  var fragment = "uniform sampler2D tPreviousLum;\r\nuniform sampler2D tCurrentLum;\r\nuniform float delta;\r\nuniform float tau;\r\n\r\nvarying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tfloat previousLum = texture2D(tPreviousLum, vUv, MIP_LEVEL_1X1).r;\r\n\tfloat currentLum = texture2D(tCurrentLum, vUv, MIP_LEVEL_1X1).r;\r\n\r\n\t// Adapt the luminance using Pattanaik's technique.\r\n\tfloat adaptedLum = previousLum + (currentLum - previousLum) * (1.0 - exp(-delta * tau));\r\n\r\n\tgl_FragColor = vec4(adaptedLum, adaptedLum, adaptedLum, 1.0);\r\n\r\n}\r\n";
+/** @namespace */
+dat.utils = dat.utils || {};
 
-  var vertex = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
+dat.utils.common = (function () {
+  
+  var ARR_EACH = Array.prototype.forEach;
+  var ARR_SLICE = Array.prototype.slice;
 
-  var classCallCheck = function (instance, Constructor) {
-    if (!(instance instanceof Constructor)) {
-      throw new TypeError("Cannot call a class as a function");
+  /**
+   * Band-aid methods for things that should be a lot easier in JavaScript.
+   * Implementation and structure inspired by underscore.js
+   * http://documentcloud.github.com/underscore/
+   */
+
+  return { 
+    
+    BREAK: {},
+  
+    extend: function(target) {
+      
+      this.each(ARR_SLICE.call(arguments, 1), function(obj) {
+        
+        for (var key in obj)
+          if (!this.isUndefined(obj[key])) 
+            target[key] = obj[key];
+        
+      }, this);
+      
+      return target;
+      
+    },
+    
+    defaults: function(target) {
+      
+      this.each(ARR_SLICE.call(arguments, 1), function(obj) {
+        
+        for (var key in obj)
+          if (this.isUndefined(target[key])) 
+            target[key] = obj[key];
+        
+      }, this);
+      
+      return target;
+    
+    },
+    
+    compose: function() {
+      var toCall = ARR_SLICE.call(arguments);
+            return function() {
+              var args = ARR_SLICE.call(arguments);
+              for (var i = toCall.length -1; i >= 0; i--) {
+                args = [toCall[i].apply(this, args)];
+              }
+              return args[0];
+            }
+    },
+    
+    each: function(obj, itr, scope) {
+
+      
+      if (ARR_EACH && obj.forEach === ARR_EACH) { 
+        
+        obj.forEach(itr, scope);
+        
+      } else if (obj.length === obj.length + 0) { // Is number but not NaN
+        
+        for (var key = 0, l = obj.length; key < l; key++)
+          if (key in obj && itr.call(scope, obj[key], key) === this.BREAK) 
+            return;
+            
+      } else {
+
+        for (var key in obj) 
+          if (itr.call(scope, obj[key], key) === this.BREAK)
+            return;
+            
+      }
+            
+    },
+    
+    defer: function(fnc) {
+      setTimeout(fnc, 0);
+    },
+    
+    toArray: function(obj) {
+      if (obj.toArray) return obj.toArray();
+      return ARR_SLICE.call(obj);
+    },
+
+    isUndefined: function(obj) {
+      return obj === undefined;
+    },
+    
+    isNull: function(obj) {
+      return obj === null;
+    },
+    
+    isNaN: function(obj) {
+      return obj !== obj;
+    },
+    
+    isArray: Array.isArray || function(obj) {
+      return obj.constructor === Array;
+    },
+    
+    isObject: function(obj) {
+      return obj === Object(obj);
+    },
+    
+    isNumber: function(obj) {
+      return obj === obj+0;
+    },
+    
+    isString: function(obj) {
+      return obj === obj+'';
+    },
+    
+    isBoolean: function(obj) {
+      return obj === false || obj === true;
+    },
+    
+    isFunction: function(obj) {
+      return Object.prototype.toString.call(obj) === '[object Function]';
     }
+  
+  };
+    
+})();
+
+
+dat.color.toString = (function (common) {
+
+  return function(color) {
+
+    if (color.a == 1 || common.isUndefined(color.a)) {
+
+      var s = color.hex.toString(16);
+      while (s.length < 6) {
+        s = '0' + s;
+      }
+
+      return '#' + s;
+
+    } else {
+
+      return 'rgba(' + Math.round(color.r) + ',' + Math.round(color.g) + ',' + Math.round(color.b) + ',' + color.a + ')';
+
+    }
+
+  }
+
+})(dat.utils.common);
+
+
+dat.Color = dat.color.Color = (function (interpret, math, toString, common) {
+
+  var Color = function() {
+
+    this.__state = interpret.apply(this, arguments);
+
+    if (this.__state === false) {
+      throw 'Failed to interpret color arguments';
+    }
+
+    this.__state.a = this.__state.a || 1;
+
+
   };
 
-  var createClass = function () {
-    function defineProperties(target, props) {
-      for (var i = 0; i < props.length; i++) {
-        var descriptor = props[i];
-        descriptor.enumerable = descriptor.enumerable || false;
-        descriptor.configurable = true;
-        if ("value" in descriptor) descriptor.writable = true;
-        Object.defineProperty(target, descriptor.key, descriptor);
-      }
+  Color.COMPONENTS = ['r','g','b','h','s','v','hex','a'];
+
+  common.extend(Color.prototype, {
+
+    toString: function() {
+      return toString(this);
+    },
+
+    toOriginal: function() {
+      return this.__state.conversion.write(this);
     }
 
-    return function (Constructor, protoProps, staticProps) {
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  }();
+  });
 
-  var inherits = function (subClass, superClass) {
-    if (typeof superClass !== "function" && superClass !== null) {
-      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+  defineRGBComponent(Color.prototype, 'r', 2);
+  defineRGBComponent(Color.prototype, 'g', 1);
+  defineRGBComponent(Color.prototype, 'b', 0);
+
+  defineHSVComponent(Color.prototype, 'h');
+  defineHSVComponent(Color.prototype, 's');
+  defineHSVComponent(Color.prototype, 'v');
+
+  Object.defineProperty(Color.prototype, 'a', {
+
+    get: function() {
+      return this.__state.a;
+    },
+
+    set: function(v) {
+      this.__state.a = v;
     }
 
-    subClass.prototype = Object.create(superClass && superClass.prototype, {
-      constructor: {
-        value: subClass,
-        enumerable: false,
-        writable: true,
-        configurable: true
+  });
+
+  Object.defineProperty(Color.prototype, 'hex', {
+
+    get: function() {
+
+      if (!this.__state.space !== 'HEX') {
+        this.__state.hex = math.rgb_to_hex(this.r, this.g, this.b);
       }
+
+      return this.__state.hex;
+
+    },
+
+    set: function(v) {
+
+      this.__state.space = 'HEX';
+      this.__state.hex = v;
+
+    }
+
+  });
+
+  function defineRGBComponent(target, component, componentHexIndex) {
+
+    Object.defineProperty(target, component, {
+
+      get: function() {
+
+        if (this.__state.space === 'RGB') {
+          return this.__state[component];
+        }
+
+        recalculateRGB(this, component, componentHexIndex);
+
+        return this.__state[component];
+
+      },
+
+      set: function(v) {
+
+        if (this.__state.space !== 'RGB') {
+          recalculateRGB(this, component, componentHexIndex);
+          this.__state.space = 'RGB';
+        }
+
+        this.__state[component] = v;
+
+      }
+
     });
-    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-  };
 
-  var possibleConstructorReturn = function (self, call) {
-    if (!self) {
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-    }
+  }
 
-    return call && (typeof call === "object" || typeof call === "function") ? call : self;
-  };
+  function defineHSVComponent(target, component) {
 
-  /**
-   * An adaptive luminosity shader material.
-   *
-   * @class AdaptiveLuminosityMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   */
+    Object.defineProperty(target, component, {
 
-  var AdaptiveLuminosityMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(AdaptiveLuminosityMaterial, _THREE$ShaderMaterial);
+      get: function() {
 
-  			function AdaptiveLuminosityMaterial() {
-  						classCallCheck(this, AdaptiveLuminosityMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(AdaptiveLuminosityMaterial).call(this, {
+        if (this.__state.space === 'HSV')
+          return this.__state[component];
 
-  									type: "AdaptiveLuminosityMaterial",
+        recalculateHSV(this);
 
-  									defines: {
+        return this.__state[component];
 
-  												MIP_LEVEL_1X1: "0.0"
+      },
 
-  									},
+      set: function(v) {
 
-  									uniforms: {
+        if (this.__state.space !== 'HSV') {
+          recalculateHSV(this);
+          this.__state.space = 'HSV';
+        }
 
-  												tPreviousLum: { value: null },
-  												tCurrentLum: { value: null },
-  												delta: { value: 0.0 },
-  												tau: { value: 1.0 }
+        this.__state[component] = v;
 
-  									},
-
-  									fragmentShader: fragment,
-  									vertexShader: vertex
-
-  						}));
-  			}
-
-  			return AdaptiveLuminosityMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$1 = "#include <packing>\r\n\r\nuniform sampler2D tDiffuse;\r\nuniform sampler2D tDepth;\r\n\r\nuniform float cameraNear;\r\nuniform float cameraFar;\r\n\r\nuniform float focus;\r\nuniform float aspect;\r\nuniform float aperture;\r\nuniform float maxBlur;\r\n\r\nvarying vec2 vUv;\r\n\r\nfloat readDepth(sampler2D depthSampler, vec2 coord) {\r\n\r\n\tfloat fragCoordZ = texture2D(depthSampler, coord).x;\r\n\tfloat viewZ = perspectiveDepthToViewZ(fragCoordZ, cameraNear, cameraFar);\r\n\r\n\treturn viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n\tvec2 aspectCorrection = vec2(1.0, aspect);\r\n\r\n\tfloat depth = readDepth(tDepth, vUv);\r\n\r\n\tfloat factor = depth - focus;\r\n\r\n\tvec2 dofBlur = vec2(clamp(factor * aperture, -maxBlur, maxBlur));\r\n\r\n\tvec2 dofblur9 = dofBlur * 0.9;\r\n\tvec2 dofblur7 = dofBlur * 0.7;\r\n\tvec2 dofblur4 = dofBlur * 0.4;\r\n\r\n\tvec4 color = vec4(0.0);\r\n\r\n\tcolor += texture2D(tDiffuse, vUv);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.0,   0.4 ) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.15,  0.37) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.29,  0.29) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.37,  0.15) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.40,  0.0 ) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.37, -0.15) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.29, -0.29) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.15, -0.37) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.0,  -0.4 ) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.15,  0.37) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.29,  0.29) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.37,  0.15) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.4,   0.0 ) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.37, -0.15) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.29, -0.29) * aspectCorrection) * dofBlur);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.15, -0.37) * aspectCorrection) * dofBlur);\r\n\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.15,  0.37) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.37,  0.15) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.37, -0.15) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.15, -0.37) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.15,  0.37) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.37,  0.15) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.37, -0.15) * aspectCorrection) * dofblur9);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.15, -0.37) * aspectCorrection) * dofblur9);\r\n\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.29,  0.29) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.40,  0.0 ) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.29, -0.29) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.0,  -0.4 ) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.29,  0.29) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.4,   0.0 ) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.29, -0.29) * aspectCorrection) * dofblur7);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.0,   0.4 ) * aspectCorrection) * dofblur7);\r\n\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.29,  0.29) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.4,   0.0 ) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.29, -0.29) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.0,  -0.4 ) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.29,  0.29) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.4,   0.0 ) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2(-0.29, -0.29) * aspectCorrection) * dofblur4);\r\n\tcolor += texture2D(tDiffuse, vUv + (vec2( 0.0,   0.4 ) * aspectCorrection) * dofblur4);\r\n\r\n\tgl_FragColor = color / 41.0;\r\n\r\n}\r\n";
-
-  var vertex$1 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * Depth of Field shader (Bokeh).
-   *
-   * Original code by Martins Upitis:
-   *  http://artmartinsh.blogspot.com/2010/02/glsl-lens-blur-filter-with-bokeh.html
-   *
-   * @class BokehMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {PerspectiveCamera} [camera] - The main camera.
-   * @param {Object} [options] - The options.
-   * @param {Number} [options.focus=1.0] - Focus distance.
-   * @param {Number} [options.aspect=1.0] - Camera aspect factor.
-   * @param {Number} [options.aperture=0.025] - Camera aperture scale. Bigger values for shallower depth of field.
-   * @param {Number} [options.maxBlur=1.0] - Maximum blur strength.
-   */
-
-  var BokehMaterial = function (_THREE$ShaderMaterial) {
-  	inherits(BokehMaterial, _THREE$ShaderMaterial);
-
-  	function BokehMaterial(camera, options) {
-  		classCallCheck(this, BokehMaterial);
-
-
-  		if (options === undefined) {
-  			options = {};
-  		}
-
-  		var _this = possibleConstructorReturn(this, Object.getPrototypeOf(BokehMaterial).call(this, {
-
-  			type: "BokehMaterial",
-
-  			uniforms: {
-
-  				tDiffuse: { value: null },
-  				tDepth: { value: null },
-
-  				cameraNear: { value: 0.1 },
-  				cameraFar: { value: 2000 },
-
-  				focus: { value: options.focus !== undefined ? options.focus : 1.0 },
-  				aspect: { value: options.aspect !== undefined ? options.aspect : 1.0 },
-  				aperture: { value: options.aperture !== undefined ? options.aperture : 0.025 },
-  				maxBlur: { value: options.maxBlur !== undefined ? options.maxBlur : 1.0 }
-
-  			},
-
-  			fragmentShader: fragment$1,
-  			vertexShader: vertex$1
-
-  		}));
-
-  		if (camera !== undefined) {
-  			_this.adoptCameraSettings(camera);
-  		}
-
-  		return _this;
-  	}
-
-  	/**
-    * Adopts the near and far plane settings of the given camera.
-    *
-    * @method adoptCameraSettings
-    * @param {PerspectiveCamera} camera - The main camera.
-    */
-
-  	createClass(BokehMaterial, [{
-  		key: "adoptCameraSettings",
-  		value: function adoptCameraSettings(camera) {
-
-  			this.uniforms.cameraNear.value = camera.near;
-  			this.uniforms.cameraFar.value = camera.far;
-  		}
-  	}]);
-  	return BokehMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$2 = "#include <packing>\r\n\r\nuniform sampler2D tDiffuse;\r\nuniform sampler2D tDepth;\r\n\r\nuniform vec2 texelSize;\r\nuniform vec2 halfTexelSize;\r\n\r\nuniform float cameraNear;\r\nuniform float cameraFar;\r\n\r\nuniform float focalLength;\r\nuniform float fStop;\r\n\r\nuniform float maxBlur;\r\nuniform float luminanceThreshold;\r\nuniform float luminanceGain;\r\nuniform float bias;\r\nuniform float fringe;\r\nuniform float ditherStrength;\r\n\r\n#ifdef SHADER_FOCUS\r\n\r\n\tuniform vec2 focusCoords;\r\n\r\n#else\r\n\r\n\tuniform float focalDepth;\r\n\r\n#endif\r\n\r\nvarying vec2 vUv;\r\n\r\n#ifdef PENTAGON\r\n\r\n\tfloat penta(vec2 coords) {\r\n\r\n\t\tconst vec4 HS0 = vec4( 1.0,          0.0,         0.0, 1.0);\r\n\t\tconst vec4 HS1 = vec4( 0.309016994,  0.951056516, 0.0, 1.0);\r\n\t\tconst vec4 HS2 = vec4(-0.809016994,  0.587785252, 0.0, 1.0);\r\n\t\tconst vec4 HS3 = vec4(-0.809016994, -0.587785252, 0.0, 1.0);\r\n\t\tconst vec4 HS4 = vec4( 0.309016994, -0.951056516, 0.0, 1.0);\r\n\t\tconst vec4 HS5 = vec4( 0.0,          0.0,         1.0, 1.0);\r\n\r\n\t\tconst vec4 ONE = vec4(1.0);\r\n\r\n\t\tconst float P_FEATHER = 0.4;\r\n\t\tconst float N_FEATHER = -P_FEATHER;\r\n\r\n\t\tfloat inOrOut = -4.0;\r\n\r\n\t\tvec4 P = vec4(coords, vec2(RINGS_FLOAT - 1.3));\r\n\r\n\t\tvec4 dist = vec4(\r\n\t\t\tdot(P, HS0),\r\n\t\t\tdot(P, HS1),\r\n\t\t\tdot(P, HS2),\r\n\t\t\tdot(P, HS3)\r\n\t\t);\r\n\r\n\t\tdist = smoothstep(N_FEATHER, P_FEATHER, dist);\r\n\r\n\t\tinOrOut += dot(dist, ONE);\r\n\r\n\t\tdist.x = dot(P, HS4);\r\n\t\tdist.y = HS5.w - abs(P.z);\r\n\r\n\t\tdist = smoothstep(N_FEATHER, P_FEATHER, dist);\r\n\t\tinOrOut += dist.x;\r\n\r\n\t\treturn clamp(inOrOut, 0.0, 1.0);\r\n\r\n\t}\r\n\r\n#endif\r\n\r\n#ifdef SHOW_FOCUS\r\n\r\n\tvec3 debugFocus(vec3 c, float blur, float depth) {\r\n\r\n\t\tfloat edge = 0.002 * depth;\r\n\t\tfloat m = clamp(smoothstep(0.0, edge, blur), 0.0, 1.0);\r\n\t\tfloat e = clamp(smoothstep(1.0 - edge, 1.0, blur), 0.0, 1.0);\r\n\r\n\t\tc = mix(c, vec3(1.0, 0.5, 0.0), (1.0 - m) * 0.6);\r\n\t\tc = mix(c, vec3(0.0, 0.5, 1.0), ((1.0 - e) - (1.0 - m)) * 0.2);\r\n\r\n\t\treturn c;\r\n\r\n\t}\r\n\r\n#endif\r\n\r\n#ifdef VIGNETTE\r\n\r\n\tfloat vignette() {\r\n\r\n\t\tconst vec2 CENTER = vec2(0.5);\r\n\r\n\t\tconst float VIGNETTE_OUT = 1.3;\r\n\t\tconst float VIGNETTE_IN = 0.0;\r\n\t\tconst float VIGNETTE_FADE = 22.0; \r\n\r\n\t\tfloat d = distance(vUv, CENTER);\r\n\t\td = smoothstep(VIGNETTE_OUT + (fStop / VIGNETTE_FADE), VIGNETTE_IN + (fStop / VIGNETTE_FADE), d);\r\n\r\n\t\treturn clamp(d, 0.0, 1.0);\r\n\r\n\t}\r\n\r\n#endif\r\n\r\nvec2 rand(vec2 coord) {\r\n\r\n\tvec2 noise;\r\n\r\n\t#ifdef NOISE\r\n\r\n\t\tconst float a = 12.9898;\r\n\t\tconst float b = 78.233;\r\n\t\tconst float c = 43758.5453;\r\n\r\n\t\tnoise.x = clamp(fract(sin(mod(dot(coord, vec2(a, b)), 3.14)) * c), 0.0, 1.0) * 2.0 - 1.0;\r\n\t\tnoise.y = clamp(fract(sin(mod(dot(coord, vec2(a, b) * 2.0), 3.14)) * c), 0.0, 1.0) * 2.0 - 1.0;\r\n\r\n\t#else\r\n\r\n\t\tnoise.x = ((fract(1.0 - coord.s * halfTexelSize.x) * 0.25) + (fract(coord.t * halfTexelSize.y) * 0.75)) * 2.0 - 1.0;\r\n\t\tnoise.y = ((fract(1.0 - coord.s * halfTexelSize.x) * 0.75) + (fract(coord.t * halfTexelSize.y) * 0.25)) * 2.0 - 1.0;\r\n\r\n\t#endif\r\n\r\n\treturn noise;\r\n\r\n}\r\n\r\nvec3 processTexel(vec2 coords, float blur) {\r\n\r\n\tconst vec3 LUM_COEFF = vec3(0.299, 0.587, 0.114);\r\n\r\n\tvec3 c;\r\n\tc.r = texture2D(tDiffuse, coords + vec2(0.0, 1.0) * texelSize * fringe * blur).r;\r\n\tc.g = texture2D(tDiffuse, coords + vec2(-0.866, -0.5) * texelSize * fringe * blur).g;\r\n\tc.b = texture2D(tDiffuse, coords + vec2(0.866, -0.5) * texelSize * fringe * blur).b;\r\n\r\n\t// Calculate the luminance of the constructed colour.\r\n\tfloat luminance = dot(c.rgb, LUM_COEFF);\r\n\tfloat threshold = max((luminance - luminanceThreshold) * luminanceGain, 0.0);\r\n\r\n\treturn c + mix(vec3(0.0), c, threshold * blur);\r\n\r\n}\r\n\r\nfloat readDepth(sampler2D depthSampler, vec2 coord) {\r\n\r\n\tfloat fragCoordZ = texture2D(depthSampler, coord).x;\r\n\tfloat viewZ = perspectiveDepthToViewZ(fragCoordZ, cameraNear, cameraFar);\r\n\r\n\treturn viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);\r\n\r\n}\r\n\r\nfloat linearize(float depth) {\r\n\r\n\treturn -cameraFar * cameraNear / (depth * (cameraFar - cameraNear) - cameraFar);\r\n\r\n}\r\n\r\nfloat gather(float i, float j, float ringSamples, inout vec3 color, float w, float h, float blur) {\r\n\r\n\tconst float TWO_PI = 6.28318531;\r\n\r\n\tfloat step = TWO_PI / ringSamples;\r\n\tfloat pw = cos(j * step) * i;\r\n\tfloat ph = sin(j * step) * i;\r\n\r\n\t#ifdef PENTAGON\r\n\r\n\t\tfloat p = penta(vec2(pw, ph));\r\n\r\n\t#else\r\n\r\n\t\tfloat p = 1.0;\r\n\r\n\t#endif\r\n\r\n\tcolor += processTexel(vUv + vec2(pw * w, ph * h), blur) * mix(1.0, i / RINGS_FLOAT, bias) * p;\r\n\r\n\treturn mix(1.0, i / RINGS_FLOAT, bias) * p;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n\tfloat depth = linearize(readDepth(tDepth, vUv));\r\n\r\n\t#ifdef SHADER_FOCUS\r\n\r\n\t\tfloat fDepth = linearize(readDepth(tDepth, focusCoords));\r\n\r\n\t#else\r\n\r\n\t\tfloat fDepth = focalDepth;\r\n\r\n\t#endif\r\n\r\n\t#ifdef MANUAL_DOF\r\n\r\n\t\tconst float nDoFStart = 1.0; \r\n\t\tconst float nDoFDist = 2.0;\r\n\t\tconst float fDoFStart = 1.0;\r\n\t\tconst float fDoFDist = 3.0;\r\n\r\n\t\tfloat focalPlane = depth - fDepth;\r\n\t\tfloat farDoF = (focalPlane - fDoFStart) / fDoFDist;\r\n\t\tfloat nearDoF = (-focalPlane - nDoFStart) / nDoFDist;\r\n\r\n\t\tfloat blur = (focalPlane > 0.0) ? farDoF : nearDoF;\r\n\r\n\t#else\r\n\r\n\t\tconst float CIRCLE_OF_CONFUSION = 0.03; // 35mm film = 0.03mm CoC.\r\n\r\n\t\tfloat focalPlaneMM = fDepth * 1000.0;\r\n\t\tfloat depthMM = depth * 1000.0;\r\n\r\n\t\tfloat focalPlane = (depthMM * focalLength) / (depthMM - focalLength);\r\n\t\tfloat farDoF = (focalPlaneMM * focalLength) / (focalPlaneMM - focalLength);\r\n\t\tfloat nearDoF = (focalPlaneMM - focalLength) / (focalPlaneMM * fStop * CIRCLE_OF_CONFUSION);\r\n\r\n\t\tfloat blur = abs(focalPlane - farDoF) * nearDoF;\r\n\r\n\t#endif\r\n\r\n\tblur = clamp(blur, 0.0, 1.0);\r\n\r\n\t// Dithering.\r\n\tvec2 noise = rand(vUv) * ditherStrength * blur;\r\n\r\n\tfloat blurFactorX = texelSize.x * blur * maxBlur + noise.x;\r\n\tfloat blurFactorY = texelSize.y * blur * maxBlur + noise.y;\r\n\r\n\tconst int MAX_RING_SAMPLES = RINGS_INT * SAMPLES_INT;\r\n\r\n\t// Calculation of final color.\r\n\tvec4 color;\r\n\r\n\tif(blur < 0.05) {\r\n\r\n\t\tcolor = texture2D(tDiffuse, vUv);\r\n\r\n\t} else {\r\n\r\n\t\tcolor = texture2D(tDiffuse, vUv);\r\n\r\n\t\tfloat s = 1.0;\r\n\t\tint ringSamples;\r\n\r\n\t\tfor(int i = 1; i <= RINGS_INT; ++i) {\r\n\r\n\t\t\tringSamples = i * SAMPLES_INT;\r\n\r\n\t\t\t// Constant loop.\r\n\t\t\tfor(int j = 0; j < MAX_RING_SAMPLES; ++j) {\r\n\r\n\t\t\t\t// Break earlier.\r\n\t\t\t\tif(j >= ringSamples) { break; }\r\n\r\n\t\t\t\ts += gather(float(i), float(j), float(ringSamples), color.rgb, blurFactorX, blurFactorY, blur);\r\n\r\n\t\t\t}\r\n\r\n\t\t}\r\n\r\n\t\tcolor.rgb /= s; // Divide by sample count.\r\n\r\n\t}\r\n\r\n\t#ifdef SHOW_FOCUS\r\n\r\n\t\tcolor.rgb = debugFocus(color.rgb, blur, depth);\r\n\r\n\t#endif\r\n\r\n\t#ifdef VIGNETTE\r\n\r\n\t\tcolor.rgb *= vignette();\r\n\r\n\t#endif\r\n\r\n\tgl_FragColor = color;\r\n\r\n}\r\n";
-
-  var vertex$2 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * Depth of Field shader version 2.
-   *
-   * Original code by Martins Upitis:
-   *  http://blenderartists.org/forum/showthread.php?237488-GLSL-depth-of-field-with-bokeh-v2-4-(update)
-   *
-   * @class Bokeh2Material
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {PerspectiveCamera} [camera] - The main camera.
-   * @param {Object} [options] - Additional options.
-   * @param {Vector2} [options.texelSize] - The absolute screen texel size.
-   * @param {Boolean} [options.showFocus=false] - Whether the focus point should be highlighted.
-   * @param {Boolean} [options.manualDoF=false] - Enables manual depth of field blur.
-   * @param {Boolean} [options.vignette=false] - Enables a vignette effect.
-   * @param {Boolean} [options.pentagon=false] - Enable to use a pentagonal shape to scale gathered texels.
-   * @param {Boolean} [options.shaderFocus=true] - Disable if you compute your own focalDepth (in metres!).
-   * @param {Boolean} [options.noise=true] - Disable if you don't want noise patterns for dithering.
-   */
-
-  var Bokeh2Material = function (_THREE$ShaderMaterial) {
-  	inherits(Bokeh2Material, _THREE$ShaderMaterial);
-
-  	function Bokeh2Material(camera, options) {
-  		classCallCheck(this, Bokeh2Material);
-
-
-  		if (options === undefined) {
-  			options = {};
-  		}
-  		if (options.rings === undefined) {
-  			options.rings = 3;
-  		}
-  		if (options.samples === undefined) {
-  			options.samples = 2;
-  		}
-  		if (options.showFocus === undefined) {
-  			options.showFocus = false;
-  		}
-  		if (options.showFocus === undefined) {
-  			options.showFocus = false;
-  		}
-  		if (options.manualDoF === undefined) {
-  			options.manualDoF = false;
-  		}
-  		if (options.vignette === undefined) {
-  			options.vignette = false;
-  		}
-  		if (options.pentagon === undefined) {
-  			options.pentagon = false;
-  		}
-  		if (options.shaderFocus === undefined) {
-  			options.shaderFocus = true;
-  		}
-  		if (options.noise === undefined) {
-  			options.noise = true;
-  		}
-
-  		var _this = possibleConstructorReturn(this, Object.getPrototypeOf(Bokeh2Material).call(this, {
-
-  			type: "Bokeh2Material",
-
-  			defines: {
-
-  				RINGS_INT: options.rings.toFixed(0),
-  				RINGS_FLOAT: options.rings.toFixed(1),
-  				SAMPLES_INT: options.samples.toFixed(0),
-  				SAMPLES_FLOAT: options.samples.toFixed(1)
-
-  			},
-
-  			uniforms: {
-
-  				tDiffuse: { value: null },
-  				tDepth: { value: null },
-
-  				texelSize: { value: new THREE.Vector2() },
-  				halfTexelSize: { value: new THREE.Vector2() },
-
-  				cameraNear: { value: 0.1 },
-  				cameraFar: { value: 2000 },
-
-  				focalLength: { value: 24.0 },
-  				fStop: { value: 0.9 },
-
-  				maxBlur: { value: 1.0 },
-  				luminanceThreshold: { value: 0.5 },
-  				luminanceGain: { value: 2.0 },
-  				bias: { value: 0.5 },
-  				fringe: { value: 0.7 },
-  				ditherStrength: { value: 0.0001 },
-
-  				focusCoords: { value: new THREE.Vector2(0.5, 0.5) },
-  				focalDepth: { value: 1.0 }
-
-  			},
-
-  			fragmentShader: fragment$2,
-  			vertexShader: vertex$2
-
-  		}));
-
-  		if (options.showFocus) {
-  			_this.defines.SHOW_FOCUS = "1";
-  		}
-  		if (options.manualDoF) {
-  			_this.defines.MANUAL_DOF = "1";
-  		}
-  		if (options.vignette) {
-  			_this.defines.VIGNETTE = "1";
-  		}
-  		if (options.pentagon) {
-  			_this.defines.PENTAGON = "1";
-  		}
-  		if (options.shaderFocus) {
-  			_this.defines.SHADER_FOCUS = "1";
-  		}
-  		if (options.noise) {
-  			_this.defines.NOISE = "1";
-  		}
-
-  		if (options.texelSize !== undefined) {
-  			_this.setTexelSize(options.texelSize.x, options.texelSize.y);
-  		}
-  		if (camera !== undefined) {
-  			_this.adoptCameraSettings(camera);
-  		}
-
-  		return _this;
-  	}
-
-  	/**
-    * Sets the texel size.
-    *
-    * @method setTexelSize
-    * @param {Number} x - The texel width.
-    * @param {Number} y - The texel height.
-    */
-
-  	createClass(Bokeh2Material, [{
-  		key: "setTexelSize",
-  		value: function setTexelSize(x, y) {
-
-  			this.uniforms.texelSize.value.set(x, y);
-  			this.uniforms.halfTexelSize.value.set(x, y).multiplyScalar(0.5);
-  		}
-
-  		/**
-     * Adopts the near and far plane and the focal length of the given camera.
-     *
-     * @method adoptCameraSettings
-     * @param {PerspectiveCamera} camera - The main camera.
-     */
-
-  	}, {
-  		key: "adoptCameraSettings",
-  		value: function adoptCameraSettings(camera) {
-
-  			this.uniforms.cameraNear.value = camera.near;
-  			this.uniforms.cameraFar.value = camera.far;
-  			this.uniforms.focalLength.value = camera.getFocalLength(); // unit: mm.
-  		}
-  	}]);
-  	return Bokeh2Material;
-  }(THREE.ShaderMaterial);
-
-  var fragment$3 = "uniform sampler2D texture1;\r\nuniform sampler2D texture2;\r\n\r\nuniform float opacity1;\r\nuniform float opacity2;\r\n\r\nvarying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvec4 texel1 = texture2D(texture1, vUv);\r\n\tvec4 texel2 = texture2D(texture2, vUv);\r\n\r\n\t#ifdef INVERT_TEX1\r\n\r\n\t\ttexel1.rgb = vec3(1.0) - texel1.rgb;\r\n\r\n\t#endif\r\n\r\n\t#ifdef INVERT_TEX2\r\n\r\n\t\ttexel2.rgb = vec3(1.0) - texel2.rgb;\r\n\r\n\t#endif\r\n\r\n\tgl_FragColor = opacity1 * texel1 + opacity2 * texel2;\r\n\r\n}\r\n";
-
-  var vertex$3 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * A material for combining two textures.
-   *
-   * @class CombineMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Boolean} [invertTexture1=false] - Invert the first texture's rgb values.
-   * @param {Boolean} [invertTexture2=false] - Invert the second texture's rgb values.
-   */
-
-  var CombineMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(CombineMaterial, _THREE$ShaderMaterial);
-
-  			function CombineMaterial(invertTexture1, invertTexture2) {
-  						classCallCheck(this, CombineMaterial);
-
-  						var _this = possibleConstructorReturn(this, Object.getPrototypeOf(CombineMaterial).call(this, {
-
-  									type: "CombineMaterial",
-
-  									uniforms: {
-
-  												texture1: { value: null },
-  												texture2: { value: null },
-
-  												opacity1: { value: 1.0 },
-  												opacity2: { value: 1.0 }
-
-  									},
-
-  									fragmentShader: fragment$3,
-  									vertexShader: vertex$3
-
-  						}));
-
-  						if (invertTexture1) {
-  									_this.defines.INVERT_TEX1 = "1";
-  						}
-  						if (invertTexture2) {
-  									_this.defines.INVERT_TEX2 = "1";
-  						}
-
-  						return _this;
-  			}
-
-  			return CombineMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$4 = "uniform sampler2D tDiffuse;\r\n\r\nvarying vec2 vUv0;\r\nvarying vec2 vUv1;\r\nvarying vec2 vUv2;\r\nvarying vec2 vUv3;\r\n\r\nvoid main() {\r\n\r\n\t// Sample top left texel.\r\n\tvec4 sum = texture2D(tDiffuse, vUv0);\r\n\r\n\t// Sample top right texel.\r\n\tsum += texture2D(tDiffuse, vUv1);\r\n\r\n\t// Sample bottom right texel.\r\n\tsum += texture2D(tDiffuse, vUv2);\r\n\r\n\t// Sample bottom left texel.\r\n\tsum += texture2D(tDiffuse, vUv3);\r\n\r\n\t// Compute the average.\r\n\tgl_FragColor = sum * 0.25;\r\n\r\n}\r\n";
-
-  var vertex$4 = "uniform vec2 texelSize;\r\nuniform vec2 halfTexelSize;\r\nuniform float kernel;\r\n\r\nvarying vec2 vUv0;\r\nvarying vec2 vUv1;\r\nvarying vec2 vUv2;\r\nvarying vec2 vUv3;\r\n\r\nvoid main() {\r\n\r\n\tvec2 dUv = (texelSize * vec2(kernel)) + halfTexelSize;\r\n\r\n\tvUv0 = vec2(uv.x - dUv.x, uv.y + dUv.y);\r\n\tvUv1 = vec2(uv.x + dUv.x, uv.y + dUv.y);\r\n\tvUv2 = vec2(uv.x + dUv.x, uv.y - dUv.y);\r\n\tvUv3 = vec2(uv.x - dUv.x, uv.y - dUv.y);\r\n\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * A convolution blur shader material.
-   *
-   * Use this shader five times in a row while adjusting the kernel before each
-   * render call in order to get a result similar to a 35x35 Gauss filter.
-   *
-   * Based on the GDC2003 Presentation by Masaki Kawase, Bunkasha Games:
-   * Frame Buffer Postprocessing Effects in DOUBLE-S.T.E.A.L (Wreckless)
-   *
-   * Further modified according to:
-   *  https://developer.apple.com/library/ios/documentation/3DDrawing/Conceptual/OpenGLES_ProgrammingGuide/BestPracticesforShaders/BestPracticesforShaders.html#//apple_ref/doc/uid/TP40008793-CH7-SW15
-   *
-   * @class ConvolutionMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Vector2} [texelSize] - The absolute screen texel size.
-   */
-
-  var ConvolutionMaterial = function (_THREE$ShaderMaterial) {
-  		inherits(ConvolutionMaterial, _THREE$ShaderMaterial);
-
-  		function ConvolutionMaterial(texelSize) {
-  				classCallCheck(this, ConvolutionMaterial);
-
-  				/**
-       * The Kawase blur kernels for five consecutive convolution passes.
-       * The result matches the 35x35 Gauss filter.
-       *
-       * @property kernels
-       * @type Number
-       * @private
-       */
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(ConvolutionMaterial).call(this, {
-
-  						type: "ConvolutionMaterial",
-
-  						uniforms: {
-
-  								tDiffuse: { value: null },
-  								texelSize: { value: new THREE.Vector2() },
-  								halfTexelSize: { value: new THREE.Vector2() },
-  								kernel: { value: 0.0 }
-
-  						},
-
-  						fragmentShader: fragment$4,
-  						vertexShader: vertex$4
-
-  				}));
-
-  				_this.kernels = new Float32Array([0.0, 1.0, 2.0, 2.0, 3.0]);
-
-  				/**
-       * Scales the kernels.
-       *
-       * @property scale
-       * @type Number
-       * @default 1.0
-       */
-
-  				_this.scale = 1.0;
-
-  				/**
-       * The current kernel.
-       *
-       * @property currentKernel
-       * @type Number
-       * @private
-       */
-
-  				_this.currentKernel = 0;
-
-  				if (texelSize !== undefined) {
-  						_this.setTexelSize(texelSize.x, texelSize.y);
-  				}
-
-  				return _this;
-  		}
-
-  		/**
-     * Sets the texel size.
-     *
-     * @method setTexelSize
-     * @param {Number} x - The texel width.
-     * @param {Number} y - The texel height.
-     */
-
-  		createClass(ConvolutionMaterial, [{
-  				key: "setTexelSize",
-  				value: function setTexelSize(x, y) {
-
-  						this.uniforms.texelSize.value.set(x, y);
-  						this.uniforms.halfTexelSize.value.set(x, y).multiplyScalar(0.5);
-  				}
-
-  				/**
-       * Adjusts the kernel for the next blur pass.
-       * Call this method before each render iteration.
-       *
-       * @method adjustKernel
-       */
-
-  		}, {
-  				key: "adjustKernel",
-  				value: function adjustKernel() {
-
-  						this.uniforms.kernel.value = this.kernels[this.currentKernel] * this.scale;
-  						if (++this.currentKernel >= this.kernels.length) {
-  								this.currentKernel = 0;
-  						}
-  				}
-  		}]);
-  		return ConvolutionMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$5 = "uniform sampler2D tDiffuse;\r\nuniform float opacity;\r\n\r\nvarying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvec4 texel = texture2D(tDiffuse, vUv);\r\n\tgl_FragColor = opacity * texel;\r\n\r\n}\r\n";
-
-  var vertex$5 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * A simple copy shader material.
-   *
-   * @class CopyMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   */
-
-  var CopyMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(CopyMaterial, _THREE$ShaderMaterial);
-
-  			function CopyMaterial() {
-  						classCallCheck(this, CopyMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(CopyMaterial).call(this, {
-
-  									type: "CopyMaterial",
-
-  									uniforms: {
-
-  												tDiffuse: { value: null },
-  												opacity: { value: 1.0 }
-
-  									},
-
-  									fragmentShader: fragment$5,
-  									vertexShader: vertex$5
-
-  						}));
-  			}
-
-  			return CopyMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$6 = "uniform sampler2D tDiffuse;\r\n\r\nuniform float angle;\r\nuniform float scale;\r\nuniform float intensity;\r\n\r\nvarying vec2 vUv;\r\nvarying vec2 vUvPattern;\r\n\r\nfloat pattern() {\r\n\r\n\tfloat s = sin(angle);\r\n\tfloat c = cos(angle);\r\n\r\n\tvec2 point = vec2(c * vUvPattern.x - s * vUvPattern.y, s * vUvPattern.x + c * vUvPattern.y) * scale;\r\n\r\n\treturn (sin(point.x) * sin(point.y)) * 4.0;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n\tvec4 texel = texture2D(tDiffuse, vUv);\r\n\tvec3 color = texel.rgb;\r\n\r\n\t#ifdef AVERAGE\r\n\r\n\t\tcolor = vec3((color.r + color.g + color.b) / 3.0);\r\n\r\n\t#endif\r\n\r\n\tcolor = vec3(color * 10.0 - 5.0 + pattern());\r\n\tcolor = texel.rgb + (color - texel.rgb) * intensity;\r\n\r\n\tgl_FragColor = vec4(color, texel.a);\r\n\r\n}\r\n";
-
-  var vertex$6 = "uniform vec4 offsetRepeat;\r\n\r\nvarying vec2 vUv;\r\nvarying vec2 vUvPattern;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tvUvPattern = uv * offsetRepeat.zw + offsetRepeat.xy;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * A dot screen shader material.
-   *
-   * @class DotScreenMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Boolean} [average] - Whether the shader should output the colour average (black and white).
-   */
-
-  var DotScreenMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(DotScreenMaterial, _THREE$ShaderMaterial);
-
-  			function DotScreenMaterial(average) {
-  						classCallCheck(this, DotScreenMaterial);
-
-  						var _this = possibleConstructorReturn(this, Object.getPrototypeOf(DotScreenMaterial).call(this, {
-
-  									type: "DotScreenMaterial",
-
-  									uniforms: {
-
-  												tDiffuse: { value: null },
-
-  												angle: { value: 1.57 },
-  												scale: { value: 1.0 },
-  												intensity: { value: 1.0 },
-
-  												offsetRepeat: { value: new THREE.Vector4(0.5, 0.5, 1.0, 1.0) }
-
-  									},
-
-  									fragmentShader: fragment$6,
-  									vertexShader: vertex$6
-
-  						}));
-
-  						if (average) {
-  									_this.defines.AVERAGE = "1";
-  						}
-
-  						return _this;
-  			}
-
-  			return DotScreenMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$7 = "uniform sampler2D tDiffuse;\r\nuniform float time;\r\n\r\nvarying vec2 vUv;\r\n\r\n#ifdef NOISE\r\n\r\n\tuniform float noiseIntensity;\r\n\r\n#endif\r\n\r\n#ifdef SCANLINES\r\n\r\n\tuniform float scanlineIntensity;\r\n\tuniform float scanlineCount;\r\n\r\n#endif\r\n\r\n#ifdef GREYSCALE\r\n\r\n\tuniform float greyscaleIntensity;\r\n\r\n\tconst vec3 LUM_COEFF = vec3(0.299, 0.587, 0.114);\r\n\r\n#elif defined(SEPIA)\r\n\r\n\tuniform float sepiaIntensity;\r\n\r\n#endif\r\n\r\n#ifdef VIGNETTE\r\n\r\n\tuniform float vignetteOffset;\r\n\tuniform float vignetteDarkness;\r\n\r\n#endif\r\n\r\nvoid main() {\r\n\r\n\tvec4 texel = texture2D(tDiffuse, vUv);\r\n\tvec3 color = texel.rgb;\r\n\r\n\t#ifdef NOISE\r\n\r\n\t\tfloat x = vUv.x * vUv.y * time * 1000.0;\r\n\t\tx = mod(x, 13.0) * mod(x, 123.0);\r\n\t\tx = mod(x, 0.01);\r\n\r\n\t\tcolor += texel.rgb * clamp(0.1 + x * 100.0, 0.0, 1.0) * noiseIntensity;\r\n\r\n\t#endif\r\n\r\n\t#ifdef SCANLINES\r\n\r\n\t\tvec2 sl = vec2(sin(vUv.y * scanlineCount), cos(vUv.y * scanlineCount));\r\n\t\tcolor += texel.rgb * vec3(sl.x, sl.y, sl.x) * scanlineIntensity;\r\n\r\n\t#endif\r\n\r\n\t#ifdef GREYSCALE\r\n\r\n\t\tcolor = mix(color, vec3(dot(color, LUM_COEFF)), greyscaleIntensity);\r\n\r\n\t#elif defined(SEPIA)\r\n\r\n\t\tvec3 c = color.rgb;\r\n\r\n\t\tcolor.r = dot(c, vec3(1.0 - 0.607 * sepiaIntensity, 0.769 * sepiaIntensity, 0.189 * sepiaIntensity));\r\n\t\tcolor.g = dot(c, vec3(0.349 * sepiaIntensity, 1.0 - 0.314 * sepiaIntensity, 0.168 * sepiaIntensity));\r\n\t\tcolor.b = dot(c, vec3(0.272 * sepiaIntensity, 0.534 * sepiaIntensity, 1.0 - 0.869 * sepiaIntensity));\r\n\r\n\t#endif\r\n\r\n\t#ifdef VIGNETTE\r\n\r\n\t\tconst vec2 CENTER = vec2(0.5);\r\n\r\n\t\t#ifdef ESKIL\r\n\r\n\t\t\tvec2 uv = (vUv - CENTER) * vec2(vignetteOffset);\r\n\t\t\tcolor = mix(color.rgb, vec3(1.0 - vignetteDarkness), dot(uv, uv));\r\n\r\n\t\t#else\r\n\r\n\t\t\tfloat dist = distance(vUv, CENTER);\r\n\t\t\tcolor *= smoothstep(0.8, vignetteOffset * 0.799, dist * (vignetteDarkness + vignetteOffset));\r\n\r\n\t\t#endif\t\t\r\n\r\n\t#endif\r\n\r\n\tgl_FragColor = vec4(clamp(color, 0.0, 1.0), texel.a);\r\n\r\n}\r\n";
-
-  var vertex$7 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * A cinematic shader that provides the following effects:
-   *  - Film Grain
-   *  - Scanlines
-   *  - Vignette
-   *  - Greyscale
-   *  - Sepia
-   *
-   * Original scanlines algorithm by Pat "Hawthorne" Shearon.
-   *  http://www.truevision3d.com/forums/showcase/staticnoise_colorblackwhite_scanline_shaders-t18698.0.html
-   *
-   * Optimized scanlines and noise with intensity scaling by Georg "Leviathan"
-   * Steinrohder. (This version is provided under a Creative Commons Attribution
-   * 3.0 License: http://creativecommons.org/licenses/by/3.0)
-   *
-   * The sepia effect is based on:
-   *  https://github.com/evanw/glfx.js
-   *
-   * The vignette code is based on PaintEffect postprocess from ro.me:
-   *  http://code.google.com/p/3-dreams-of-black/source/browse/deploy/js/effects/PaintEffect.js
-   *
-   * @class FilmMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Object} [options] - The options.
-   * @param {Boolean} [options.greyscale=false] - Enable greyscale effect. Greyscale and sepia are mutually exclusive.
-   * @param {Boolean} [options.sepia=false] - Enable sepia effect. Greyscale and sepia are mutually exclusive.
-   * @param {Boolean} [options.vignette=false] - Apply vignette effect.
-   * @param {Boolean} [options.eskil=false] - Use Eskil's vignette approach. The default looks dusty while Eskil looks burned out.
-   * @param {Boolean} [options.scanlines=true] - Show scanlines.
-   * @param {Boolean} [options.noise=true] - Show noise-based film grain.
-   * @param {Number} [options.noiseIntensity=0.5] - The noise intensity. 0.0 to 1.0.
-   * @param {Number} [options.scanlineIntensity=0.05] - The scanline intensity. 0.0 to 1.0.
-   * @param {Number} [options.greyscaleIntensity=1.0] - The intensity of the greyscale effect.
-   * @param {Number} [options.sepiaIntensity=1.0] - The intensity of the sepia effect.
-   * @param {Number} [options.vignetteOffset=1.0] - The offset of the vignette effect.
-   * @param {Number} [options.vignetteDarkness=1.0] - The darkness of the vignette effect.
-   */
-
-  var FilmMaterial = function (_THREE$ShaderMaterial) {
-    inherits(FilmMaterial, _THREE$ShaderMaterial);
-
-    function FilmMaterial(options) {
-      classCallCheck(this, FilmMaterial);
-
-
-      if (options === undefined) {
-        options = {};
       }
 
-      // These are enabled by default.
-      var _this = possibleConstructorReturn(this, Object.getPrototypeOf(FilmMaterial).call(this, {
+    });
 
-        type: "FilmMaterial",
+  }
 
-        uniforms: {
+  function recalculateRGB(color, component, componentHexIndex) {
 
-          tDiffuse: { value: null },
-          time: { value: 0.0 },
+    if (color.__state.space === 'HEX') {
 
-          noiseIntensity: { value: options.noiseIntensity !== undefined ? options.noiseIntensity : 0.5 },
-          scanlineIntensity: { value: options.scanlineIntensity !== undefined ? options.scanlineIntensity : 0.05 },
-          scanlineCount: { value: 0.0 },
+      color.__state[component] = math.component_from_hex(color.__state.hex, componentHexIndex);
 
-          greyscaleIntensity: { value: options.greyscaleIntensity !== undefined ? options.greyscaleIntensity : 1.0 },
-          sepiaIntensity: { value: options.sepiaIntensity !== undefined ? options.sepiaIntensity : 1.0 },
+    } else if (color.__state.space === 'HSV') {
 
-          vignetteOffset: { value: options.vignetteOffset !== undefined ? options.vignetteOffset : 1.0 },
-          vignetteDarkness: { value: options.vignetteDarkness !== undefined ? options.vignetteDarkness : 1.0 }
+      common.extend(color.__state, math.hsv_to_rgb(color.__state.h, color.__state.s, color.__state.v));
+
+    } else {
+
+      throw 'Corrupted color state';
+
+    }
+
+  }
+
+  function recalculateHSV(color) {
+
+    var result = math.rgb_to_hsv(color.r, color.g, color.b);
+
+    common.extend(color.__state,
+        {
+          s: result.s,
+          v: result.v
+        }
+    );
+
+    if (!common.isNaN(result.h)) {
+      color.__state.h = result.h;
+    } else if (common.isUndefined(color.__state.h)) {
+      color.__state.h = 0;
+    }
+
+  }
+
+  return Color;
+
+})(dat.color.interpret = (function (toString, common) {
+
+  var result, toReturn;
+
+  var interpret = function() {
+
+    toReturn = false;
+
+    var original = arguments.length > 1 ? common.toArray(arguments) : arguments[0];
+
+    common.each(INTERPRETATIONS, function(family) {
+
+      if (family.litmus(original)) {
+
+        common.each(family.conversions, function(conversion, conversionName) {
+
+          result = conversion.read(original);
+
+          if (toReturn === false && result !== false) {
+            toReturn = result;
+            result.conversionName = conversionName;
+            result.conversion = conversion;
+            return common.BREAK;
+
+          }
+
+        });
+
+        return common.BREAK;
+
+      }
+
+    });
+
+    return toReturn;
+
+  };
+
+  var INTERPRETATIONS = [
+
+    // Strings
+    {
+
+      litmus: common.isString,
+
+      conversions: {
+
+        THREE_CHAR_HEX: {
+
+          read: function(original) {
+
+            var test = original.match(/^#([A-F0-9])([A-F0-9])([A-F0-9])$/i);
+            if (test === null) return false;
+
+            return {
+              space: 'HEX',
+              hex: parseInt(
+                  '0x' +
+                      test[1].toString() + test[1].toString() +
+                      test[2].toString() + test[2].toString() +
+                      test[3].toString() + test[3].toString())
+            };
+
+          },
+
+          write: toString
 
         },
 
-        fragmentShader: fragment$7,
-        vertexShader: vertex$7
+        SIX_CHAR_HEX: {
 
-      }));
+          read: function(original) {
 
-      if (options.scanlines === undefined || options.scanlines) {
-        _this.defines.SCANLINES = "1";
-      }
-      if (options.noise === undefined || options.noise) {
-        _this.defines.NOISE = "1";
+            var test = original.match(/^#([A-F0-9]{6})$/i);
+            if (test === null) return false;
+
+            return {
+              space: 'HEX',
+              hex: parseInt('0x' + test[1].toString())
+            };
+
+          },
+
+          write: toString
+
+        },
+
+        CSS_RGB: {
+
+          read: function(original) {
+
+            var test = original.match(/^rgb\(\s*(.+)\s*,\s*(.+)\s*,\s*(.+)\s*\)/);
+            if (test === null) return false;
+
+            return {
+              space: 'RGB',
+              r: parseFloat(test[1]),
+              g: parseFloat(test[2]),
+              b: parseFloat(test[3])
+            };
+
+          },
+
+          write: toString
+
+        },
+
+        CSS_RGBA: {
+
+          read: function(original) {
+
+            var test = original.match(/^rgba\(\s*(.+)\s*,\s*(.+)\s*,\s*(.+)\s*\,\s*(.+)\s*\)/);
+            if (test === null) return false;
+
+            return {
+              space: 'RGB',
+              r: parseFloat(test[1]),
+              g: parseFloat(test[2]),
+              b: parseFloat(test[3]),
+              a: parseFloat(test[4])
+            };
+
+          },
+
+          write: toString
+
+        }
+
       }
 
-      if (options.greyscale) {
-        _this.defines.GREYSCALE = "1";
-      }
-      if (options.sepia) {
-        _this.defines.SEPIA = "1";
-      }
-      if (options.vignette) {
-        _this.defines.VIGNETTE = "1";
-      }
-      if (options.eskil) {
-        _this.defines.ESKIL = "1";
+    },
+
+    // Numbers
+    {
+
+      litmus: common.isNumber,
+
+      conversions: {
+
+        HEX: {
+          read: function(original) {
+            return {
+              space: 'HEX',
+              hex: original,
+              conversionName: 'HEX'
+            }
+          },
+
+          write: function(color) {
+            return color.hex;
+          }
+        }
+
       }
 
-      return _this;
+    },
+
+    // Arrays
+    {
+
+      litmus: common.isArray,
+
+      conversions: {
+
+        RGB_ARRAY: {
+          read: function(original) {
+            if (original.length != 3) return false;
+            return {
+              space: 'RGB',
+              r: original[0],
+              g: original[1],
+              b: original[2]
+            };
+          },
+
+          write: function(color) {
+            return [color.r, color.g, color.b];
+          }
+
+        },
+
+        RGBA_ARRAY: {
+          read: function(original) {
+            if (original.length != 4) return false;
+            return {
+              space: 'RGB',
+              r: original[0],
+              g: original[1],
+              b: original[2],
+              a: original[3]
+            };
+          },
+
+          write: function(color) {
+            return [color.r, color.g, color.b, color.a];
+          }
+
+        }
+
+      }
+
+    },
+
+    // Objects
+    {
+
+      litmus: common.isObject,
+
+      conversions: {
+
+        RGBA_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.r) &&
+                common.isNumber(original.g) &&
+                common.isNumber(original.b) &&
+                common.isNumber(original.a)) {
+              return {
+                space: 'RGB',
+                r: original.r,
+                g: original.g,
+                b: original.b,
+                a: original.a
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              r: color.r,
+              g: color.g,
+              b: color.b,
+              a: color.a
+            }
+          }
+        },
+
+        RGB_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.r) &&
+                common.isNumber(original.g) &&
+                common.isNumber(original.b)) {
+              return {
+                space: 'RGB',
+                r: original.r,
+                g: original.g,
+                b: original.b
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              r: color.r,
+              g: color.g,
+              b: color.b
+            }
+          }
+        },
+
+        HSVA_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.h) &&
+                common.isNumber(original.s) &&
+                common.isNumber(original.v) &&
+                common.isNumber(original.a)) {
+              return {
+                space: 'HSV',
+                h: original.h,
+                s: original.s,
+                v: original.v,
+                a: original.a
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              h: color.h,
+              s: color.s,
+              v: color.v,
+              a: color.a
+            }
+          }
+        },
+
+        HSV_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.h) &&
+                common.isNumber(original.s) &&
+                common.isNumber(original.v)) {
+              return {
+                space: 'HSV',
+                h: original.h,
+                s: original.s,
+                v: original.v
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              h: color.h,
+              s: color.s,
+              v: color.v
+            }
+          }
+
+        }
+
+      }
+
     }
 
-    return FilmMaterial;
-  }(THREE.ShaderMaterial);
 
-  var fragment$8 = "uniform sampler2D tDiffuse;\r\nuniform sampler2D tPerturb;\r\n\r\nuniform bool active;\r\n\r\nuniform float amount;\r\nuniform float angle;\r\nuniform float seed;\r\nuniform float seedX;\r\nuniform float seedY;\r\nuniform float distortionX;\r\nuniform float distortionY;\r\nuniform float colS;\r\n\r\nvarying vec2 vUv;\r\n\r\nfloat rand(vec2 tc) {\r\n\r\n\tconst float a = 12.9898;\r\n\tconst float b = 78.233;\r\n\tconst float c = 43758.5453;\r\n\r\n\tfloat dt = dot(tc, vec2(a, b));\r\n\tfloat sn = mod(dt, 3.14);\r\n\r\n\treturn fract(sin(sn) * c);\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n\tvec2 coord = vUv;\r\n\r\n\tfloat xs, ys;\r\n\tvec4 normal;\r\n\r\n\tvec2 offset;\r\n\tvec4 cr, cga, cb;\r\n\tvec4 snow, color;\r\n\r\n\tfloat sx, sy;\r\n\r\n\tif(active) {\r\n\r\n\t\txs = floor(gl_FragCoord.x / 0.5);\r\n\t\tys = floor(gl_FragCoord.y / 0.5);\r\n\r\n\t\tnormal = texture2D(tPerturb, coord * seed * seed);\r\n\r\n\t\tif(coord.y < distortionX + colS && coord.y > distortionX - colS * seed) {\r\n\r\n\t\t\tsx = clamp(ceil(seedX), 0.0, 1.0);\r\n\t\t\tcoord.y = sx * (1.0 - (coord.y + distortionY)) + (1.0 - sx) * distortionY;\r\n\r\n\t\t}\r\n\r\n\t\tif(coord.x < distortionY + colS && coord.x > distortionY - colS * seed) {\r\n\r\n\t\t\tsy = clamp(ceil(seedY), 0.0, 1.0);\r\n\t\t\tcoord.x = sy * distortionX + (1.0 - sy) * (1.0 - (coord.x + distortionX));\r\n\r\n\t\t}\r\n\r\n\t\tcoord.x += normal.x * seedX * (seed / 5.0);\r\n\t\tcoord.y += normal.y * seedY * (seed / 5.0);\r\n\r\n\t\toffset = amount * vec2(cos(angle), sin(angle));\r\n\r\n\t\tcr = texture2D(tDiffuse, coord + offset);\r\n\t\tcga = texture2D(tDiffuse, coord);\r\n\t\tcb = texture2D(tDiffuse, coord - offset);\r\n\r\n\t\tcolor = vec4(cr.r, cga.g, cb.b, cga.a);\r\n\t\tsnow = 200.0 * amount * vec4(rand(vec2(xs * seed, ys * seed * 50.0)) * 0.2);\r\n\t\tcolor += snow;\r\n\r\n\t} else {\r\n\r\n\t\tcolor = texture2D(tDiffuse, vUv);\r\n\r\n\t}\r\n\r\n\tgl_FragColor = color;\r\n\r\n}\r\n";
+  ];
 
-  var vertex$8 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
+  return interpret;
 
-  /**
-   * A glitch shader material.
-   *
-   * Reference:
-   *  https://github.com/staffantan/unityglitch
-   *
-   * @class GlitchMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   */
 
-  var GlitchMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(GlitchMaterial, _THREE$ShaderMaterial);
+})(dat.color.toString,
+dat.utils.common),
+dat.color.math = (function () {
 
-  			function GlitchMaterial() {
-  						classCallCheck(this, GlitchMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(GlitchMaterial).call(this, {
+  var tmpComponent;
 
-  									type: "GlitchMaterial",
+  return {
 
-  									uniforms: {
+    hsv_to_rgb: function(h, s, v) {
 
-  												tDiffuse: { value: null },
-  												tPerturb: { value: null },
+      var hi = Math.floor(h / 60) % 6;
 
-  												active: { value: 1 },
+      var f = h / 60 - Math.floor(h / 60);
+      var p = v * (1.0 - s);
+      var q = v * (1.0 - (f * s));
+      var t = v * (1.0 - ((1.0 - f) * s));
+      var c = [
+        [v, t, p],
+        [q, v, p],
+        [p, v, t],
+        [p, q, v],
+        [t, p, v],
+        [v, p, q]
+      ][hi];
 
-  												amount: { value: 0.8 },
-  												angle: { value: 0.02 },
-  												seed: { value: 0.02 },
-  												seedX: { value: 0.02 },
-  												seedY: { value: 0.02 },
-  												distortionX: { value: 0.5 },
-  												distortionY: { value: 0.6 },
-  												colS: { value: 0.05 }
+      return {
+        r: c[0] * 255,
+        g: c[1] * 255,
+        b: c[2] * 255
+      };
 
-  									},
+    },
 
-  									fragmentShader: fragment$8,
-  									vertexShader: vertex$8
+    rgb_to_hsv: function(r, g, b) {
 
-  						}));
-  			}
+      var min = Math.min(r, g, b),
+          max = Math.max(r, g, b),
+          delta = max - min,
+          h, s;
 
-  			return GlitchMaterial;
-  }(THREE.ShaderMaterial);
+      if (max != 0) {
+        s = delta / max;
+      } else {
+        return {
+          h: NaN,
+          s: 0,
+          v: 0
+        };
+      }
 
-  var fragment$9 = "uniform sampler2D tDiffuse;\r\nuniform vec3 lightPosition;\r\n\r\nuniform float exposure;\r\nuniform float decay;\r\nuniform float density;\r\nuniform float weight;\r\nuniform float clampMax;\r\n\r\nvarying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvec2 texCoord = vUv;\r\n\r\n\t// Calculate vector from pixel to light source in screen space.\r\n\tvec2 deltaTexCoord = texCoord - lightPosition.st;\r\n\tdeltaTexCoord *= 1.0 / NUM_SAMPLES_FLOAT * density;\r\n\r\n\t// A decreasing illumination factor.\r\n\tfloat illuminationDecay = 1.0;\r\n\r\n\tvec4 sample;\r\n\tvec4 color = vec4(0.0);\r\n\r\n\t// Estimate the probability of occlusion at each pixel by summing samples along a ray to the light source.\r\n\tfor(int i = 0; i < NUM_SAMPLES_INT; ++i) {\r\n\r\n\t\ttexCoord -= deltaTexCoord;\r\n\t\tsample = texture2D(tDiffuse, texCoord);\r\n\r\n\t\t// Apply sample attenuation scale/decay factors.\r\n\t\tsample *= illuminationDecay * weight;\r\n\r\n\t\tcolor += sample;\r\n\r\n\t\t// Update exponential decay factor.\r\n\t\tilluminationDecay *= decay;\r\n\r\n\t}\r\n\r\n\tgl_FragColor = clamp(color * exposure, 0.0, clampMax);\r\n\r\n}\r\n";
+      if (r == max) {
+        h = (g - b) / delta;
+      } else if (g == max) {
+        h = 2 + (b - r) / delta;
+      } else {
+        h = 4 + (r - g) / delta;
+      }
+      h /= 6;
+      if (h < 0) {
+        h += 1;
+      }
 
-  var vertex$9 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
+      return {
+        h: h * 360,
+        s: s,
+        v: max / 255
+      };
+    },
 
-  /**
-   * A crepuscular rays shader material.
-   *
-   * References:
-   *
-   * Thibaut Despoulain, 2012:
-   *  (WebGL) Volumetric Light Approximation in Three.js
-   *  http://bkcore.com/blog/3d/webgl-three-js-volumetric-light-godrays.html
-   *
-   * Nvidia, GPU Gems 3, 2008:
-   *  Chapter 13. Volumetric Light Scattering as a Post-Process
-   *  http://http.developer.nvidia.com/GPUGems3/gpugems3_ch13.html
-   *
-   * @class GodRaysMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   */
+    rgb_to_hex: function(r, g, b) {
+      var hex = this.hex_with_component(0, 2, r);
+      hex = this.hex_with_component(hex, 1, g);
+      hex = this.hex_with_component(hex, 0, b);
+      return hex;
+    },
 
-  var GodRaysMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(GodRaysMaterial, _THREE$ShaderMaterial);
+    component_from_hex: function(hex, componentIndex) {
+      return (hex >> (componentIndex * 8)) & 0xFF;
+    },
 
-  			function GodRaysMaterial() {
-  						classCallCheck(this, GodRaysMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(GodRaysMaterial).call(this, {
+    hex_with_component: function(hex, componentIndex, value) {
+      return value << (tmpComponent = componentIndex * 8) | (hex & ~ (0xFF << tmpComponent));
+    }
 
-  									type: "GodRaysMaterial",
+  }
 
-  									defines: {
+})(),
+dat.color.toString,
+dat.utils.common);
+},{}],7:[function(require,module,exports){
+/**
+ * dat-gui JavaScript Controller Library
+ * http://code.google.com/p/dat-gui
+ *
+ * Copyright 2011 Data Arts Team, Google Creative Lab
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 
-  												NUM_SAMPLES_FLOAT: "60.0",
-  												NUM_SAMPLES_INT: "60"
+/** @namespace */
+var dat = module.exports = dat || {};
 
-  									},
+/** @namespace */
+dat.gui = dat.gui || {};
 
-  									uniforms: {
+/** @namespace */
+dat.utils = dat.utils || {};
 
-  												tDiffuse: { value: null },
-  												lightPosition: { value: null },
+/** @namespace */
+dat.controllers = dat.controllers || {};
 
-  												exposure: { value: 0.6 },
-  												decay: { value: 0.93 },
-  												density: { value: 0.96 },
-  												weight: { value: 0.4 },
-  												clampMax: { value: 1.0 }
+/** @namespace */
+dat.dom = dat.dom || {};
 
-  									},
+/** @namespace */
+dat.color = dat.color || {};
 
-  									fragmentShader: fragment$9,
-  									vertexShader: vertex$9
+dat.utils.css = (function () {
+  return {
+    load: function (url, doc) {
+      doc = doc || document;
+      var link = doc.createElement('link');
+      link.type = 'text/css';
+      link.rel = 'stylesheet';
+      link.href = url;
+      doc.getElementsByTagName('head')[0].appendChild(link);
+    },
+    inject: function(css, doc) {
+      doc = doc || document;
+      var injected = document.createElement('style');
+      injected.type = 'text/css';
+      injected.innerHTML = css;
+      doc.getElementsByTagName('head')[0].appendChild(injected);
+    }
+  }
+})();
 
-  						}));
-  			}
 
-  			return GodRaysMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$10 = "uniform sampler2D tDiffuse;\r\nuniform float distinction;\r\nuniform vec2 range;\r\n\r\nvarying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tconst vec4 LUM_COEFF = vec4(0.299, 0.587, 0.114, 0.0);\r\n\r\n\tvec4 texel = texture2D(tDiffuse, vUv);\r\n\tfloat v = dot(texel, LUM_COEFF);\r\n\r\n\t#ifdef RANGE\r\n\r\n\t\tfloat low = step(range.x, v);\r\n\t\tfloat high = step(v, range.y);\r\n\r\n\t\t// Apply the mask.\r\n\t\tv *= low * high;\r\n\r\n\t#endif\r\n\r\n\tv = pow(abs(v), distinction);\r\n\r\n\t#ifdef COLOR\r\n\r\n\t\tgl_FragColor = vec4(texel.rgb * v, texel.a);\r\n\r\n\t#else\r\n\r\n\t\tgl_FragColor = vec4(v, v, v, texel.a);\r\n\r\n\t#endif\r\n\r\n}\r\n";
-
-  var vertex$10 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * A luminance shader material.
-   *
-   * This shader produces a greyscale luminance map. It can also be configured to
-   * output colors that are scaled with their respective luminance value.
-   * Additionally, a range may be provided to mask out undesired texels.
-   *
-   * The alpha channel will remain unaffected in all cases.
-   *
-   * Luminance range reference:
-   *  https://cycling74.com/2007/05/23/your-first-shader/#.Vty9FfkrL4Z
-   *
-   * @class LuminosityMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @params {Boolean} [color=false] - Defines whether the shader should output colours scaled with their luminance value.
-   * @params {Vector2} [range] - If provided, the shader will mask out texels that aren't in the specified range.
-   */
-
-  var LuminosityMaterial = function (_THREE$ShaderMaterial) {
-     inherits(LuminosityMaterial, _THREE$ShaderMaterial);
-
-     function LuminosityMaterial(color, range) {
-        classCallCheck(this, LuminosityMaterial);
-
-        var _this = possibleConstructorReturn(this, Object.getPrototypeOf(LuminosityMaterial).call(this, {
-
-           type: "LuminosityMaterial",
-
-           uniforms: {
-
-              tDiffuse: { value: null },
-              distinction: { value: 1.0 },
-              range: { value: range !== undefined ? range : new THREE.Vector2() }
-
-           },
-
-           fragmentShader: fragment$10,
-           vertexShader: vertex$10
-
-        }));
-
-        if (color !== undefined) {
-           _this.defines.COLOR = "1";
-        }
-        if (range !== undefined) {
-           _this.defines.RANGE = "1";
-        }
-
-        return _this;
-     }
-
-     return LuminosityMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$11 = "uniform sampler2D tDiffuse;\r\nuniform sampler2D tWeights;\r\n\r\nuniform vec2 texelSize;\r\n\r\nvarying vec2 vUv;\r\nvarying vec4 vOffset;\r\n\r\nvoid main() {\r\n\r\n\t// Fetch the blending weights for current pixel.\r\n\tvec4 a;\r\n\ta.xz = texture2D(tWeights, vUv).xz;\r\n\ta.y = texture2D(tWeights, vOffset.zw).g;\r\n\ta.w = texture2D(tWeights, vOffset.xy).a;\r\n\r\n\tvec4 color;\r\n\r\n\t// Check if there is any blending weight with a value greater than 0.0.\r\n\tif(dot(a, vec4(1.0)) < 1e-5) {\r\n\r\n\t\tcolor = texture2D(tDiffuse, vUv, 0.0);\r\n\r\n\t} else {\r\n\r\n\t\t/* Up to four lines can be crossing a pixel (one through each edge). We favor\r\n\t\t * blending by choosing the line with the maximum weight for each direction.\r\n\t\t */\r\n\r\n\t\tvec2 offset;\r\n\t\toffset.x = a.a > a.b ? a.a : -a.b; // Left vs. right.\r\n\t\toffset.y = a.g > a.r ? -a.g : a.r; // Top vs. bottom (changed signs).\r\n\r\n\t\t// Then we go in the direction that has the maximum weight (horizontal vs. vertical).\r\n\t\tif(abs(offset.x) > abs(offset.y)) {\r\n\r\n\t\t\toffset.y = 0.0;\r\n\r\n\t\t} else {\r\n\r\n\t\t\toffset.x = 0.0;\r\n\r\n\t\t}\r\n\r\n\t\t// Fetch the opposite color and lerp by hand.\r\n\t\tcolor = texture2D(tDiffuse, vUv, 0.0);\r\n\t\tvec2 coord = vUv + sign(offset) * texelSize;\r\n\t\tvec4 oppositeColor = texture2D(tDiffuse, coord, 0.0);\r\n\t\tfloat s = abs(offset.x) > abs(offset.y) ? abs(offset.x) : abs(offset.y);\r\n\r\n\t\t// Gamma correction.\r\n\t\tcolor.rgb = pow(abs(color.rgb), vec3(2.2));\r\n\t\toppositeColor.rgb = pow(abs(oppositeColor.rgb), vec3(2.2));\r\n\t\tcolor = mix(color, oppositeColor, s);\r\n\t\tcolor.rgb = pow(abs(color.rgb), vec3(1.0 / 2.2));\r\n\r\n\t}\r\n\r\n\tgl_FragColor = color;\r\n\r\n}\r\n";
-
-  var vertex$11 = "uniform vec2 texelSize;\r\n\r\nvarying vec2 vUv;\r\nvarying vec4 vOffset;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\r\n\tvOffset = uv.xyxy + texelSize.xyxy * vec4(1.0, 0.0, 0.0, -1.0); // Changed sign in W component.\r\n\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
+dat.utils.common = (function () {
+  
+  var ARR_EACH = Array.prototype.forEach;
+  var ARR_SLICE = Array.prototype.slice;
 
   /**
-   * Subpixel Morphological Antialiasing.
-   *
-   * This material is used to render the final antialiasing.
-   *
-   * @class SMAABlendMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Vector2} [texelSize] - The absolute screen texel size.
+   * Band-aid methods for things that should be a lot easier in JavaScript.
+   * Implementation and structure inspired by underscore.js
+   * http://documentcloud.github.com/underscore/
    */
 
-  var SMAABlendMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(SMAABlendMaterial, _THREE$ShaderMaterial);
+  return { 
+    
+    BREAK: {},
+  
+    extend: function(target) {
+      
+      this.each(ARR_SLICE.call(arguments, 1), function(obj) {
+        
+        for (var key in obj)
+          if (!this.isUndefined(obj[key])) 
+            target[key] = obj[key];
+        
+      }, this);
+      
+      return target;
+      
+    },
+    
+    defaults: function(target) {
+      
+      this.each(ARR_SLICE.call(arguments, 1), function(obj) {
+        
+        for (var key in obj)
+          if (this.isUndefined(target[key])) 
+            target[key] = obj[key];
+        
+      }, this);
+      
+      return target;
+    
+    },
+    
+    compose: function() {
+      var toCall = ARR_SLICE.call(arguments);
+            return function() {
+              var args = ARR_SLICE.call(arguments);
+              for (var i = toCall.length -1; i >= 0; i--) {
+                args = [toCall[i].apply(this, args)];
+              }
+              return args[0];
+            }
+    },
+    
+    each: function(obj, itr, scope) {
 
-  			function SMAABlendMaterial(texelSize) {
-  						classCallCheck(this, SMAABlendMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(SMAABlendMaterial).call(this, {
+      
+      if (ARR_EACH && obj.forEach === ARR_EACH) { 
+        
+        obj.forEach(itr, scope);
+        
+      } else if (obj.length === obj.length + 0) { // Is number but not NaN
+        
+        for (var key = 0, l = obj.length; key < l; key++)
+          if (key in obj && itr.call(scope, obj[key], key) === this.BREAK) 
+            return;
+            
+      } else {
 
-  									type: "SMAABlendMaterial",
+        for (var key in obj) 
+          if (itr.call(scope, obj[key], key) === this.BREAK)
+            return;
+            
+      }
+            
+    },
+    
+    defer: function(fnc) {
+      setTimeout(fnc, 0);
+    },
+    
+    toArray: function(obj) {
+      if (obj.toArray) return obj.toArray();
+      return ARR_SLICE.call(obj);
+    },
 
-  									uniforms: {
+    isUndefined: function(obj) {
+      return obj === undefined;
+    },
+    
+    isNull: function(obj) {
+      return obj === null;
+    },
+    
+    isNaN: function(obj) {
+      return obj !== obj;
+    },
+    
+    isArray: Array.isArray || function(obj) {
+      return obj.constructor === Array;
+    },
+    
+    isObject: function(obj) {
+      return obj === Object(obj);
+    },
+    
+    isNumber: function(obj) {
+      return obj === obj+0;
+    },
+    
+    isString: function(obj) {
+      return obj === obj+'';
+    },
+    
+    isBoolean: function(obj) {
+      return obj === false || obj === true;
+    },
+    
+    isFunction: function(obj) {
+      return Object.prototype.toString.call(obj) === '[object Function]';
+    }
+  
+  };
+    
+})();
 
-  												tDiffuse: { value: null },
-  												tWeights: { value: null },
-  												texelSize: { value: texelSize !== undefined ? texelSize : new THREE.Vector2() }
 
-  									},
-
-  									fragmentShader: fragment$11,
-  									vertexShader: vertex$11
-
-  						}));
-  			}
-
-  			return SMAABlendMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$12 = "uniform sampler2D tDiffuse;\r\n\r\nvarying vec2 vUv;\r\nvarying vec4 vOffset[3];\r\n\r\nvoid main() {\r\n\r\n\tconst vec2 THRESHOLD = vec2(EDGE_THRESHOLD);\r\n\r\n\t// Calculate color deltas.\r\n\tvec4 delta;\r\n\tvec3 c = texture2D(tDiffuse, vUv).rgb;\r\n\r\n\tvec3 cLeft = texture2D(tDiffuse, vOffset[0].xy).rgb;\r\n\tvec3 t = abs(c - cLeft);\r\n\tdelta.x = max(max(t.r, t.g), t.b);\r\n\r\n\tvec3 cTop = texture2D(tDiffuse, vOffset[0].zw).rgb;\r\n\tt = abs(c - cTop);\r\n\tdelta.y = max(max(t.r, t.g), t.b);\r\n\r\n\t// We do the usual threshold.\r\n\tvec2 edges = step(THRESHOLD, delta.xy);\r\n\r\n\t// Then discard if there is no edge.\r\n\tif(dot(edges, vec2(1.0)) == 0.0) {\r\n\r\n\t\tdiscard;\r\n\r\n\t}\r\n\r\n\t// Calculate right and bottom deltas.\r\n\tvec3 cRight = texture2D(tDiffuse, vOffset[1].xy).rgb;\r\n\tt = abs(c - cRight);\r\n\tdelta.z = max(max(t.r, t.g), t.b);\r\n\r\n\tvec3 cBottom  = texture2D(tDiffuse, vOffset[1].zw).rgb;\r\n\tt = abs(c - cBottom);\r\n\tdelta.w = max(max(t.r, t.g), t.b);\r\n\r\n\t// Calculate the maximum delta in the direct neighborhood.\r\n\tfloat maxDelta = max(max(max(delta.x, delta.y), delta.z), delta.w);\r\n\r\n\t// Calculate left-left and top-top deltas.\r\n\tvec3 cLeftLeft  = texture2D(tDiffuse, vOffset[2].xy).rgb;\r\n\tt = abs(c - cLeftLeft);\r\n\tdelta.z = max(max(t.r, t.g), t.b);\r\n\r\n\tvec3 cTopTop = texture2D(tDiffuse, vOffset[2].zw).rgb;\r\n\tt = abs(c - cTopTop);\r\n\tdelta.w = max(max(t.r, t.g), t.b);\r\n\r\n\t// Calculate the final maximum delta.\r\n\tmaxDelta = max(max(maxDelta, delta.z), delta.w);\r\n\r\n\t// Local contrast adaptation in action.\r\n\tedges.xy *= step(0.5 * maxDelta, delta.xy);\r\n\r\n\tgl_FragColor = vec4(edges, 0.0, 0.0);\r\n\r\n}\r\n";
-
-  var vertex$12 = "uniform vec2 texelSize;\r\n\r\nvarying vec2 vUv;\r\nvarying vec4 vOffset[3];\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\r\n\tvOffset[0] = uv.xyxy + texelSize.xyxy * vec4(-1.0, 0.0, 0.0, 1.0); // Changed sign in W component.\r\n\tvOffset[1] = uv.xyxy + texelSize.xyxy * vec4(1.0, 0.0, 0.0, -1.0); // Changed sign in W component.\r\n\tvOffset[2] = uv.xyxy + texelSize.xyxy * vec4(-2.0, 0.0, 0.0, 2.0); // Changed sign in W component.\r\n\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
+dat.controllers.Controller = (function (common) {
 
   /**
-   * Subpixel Morphological Antialiasing.
+   * @class An "abstract" class that represents a given property of an object.
    *
-   * This material detects edges in a color texture.
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
    *
-   * @class SMAAColorEdgesMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Vector2} [texelSize] - The absolute screen texel size.
+   * @member dat.controllers
    */
+  var Controller = function(object, property) {
 
-  var SMAAColorEdgesMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(SMAAColorEdgesMaterial, _THREE$ShaderMaterial);
+    this.initialValue = object[property];
 
-  			function SMAAColorEdgesMaterial(texelSize) {
-  						classCallCheck(this, SMAAColorEdgesMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(SMAAColorEdgesMaterial).call(this, {
-
-  									type: "SMAAColorEdgesMaterial",
-
-  									defines: {
-
-  												EDGE_THRESHOLD: "0.1"
-
-  									},
-
-  									uniforms: {
-
-  												tDiffuse: { value: null },
-  												texelSize: { value: texelSize !== undefined ? texelSize : new THREE.Vector2() }
-
-  									},
-
-  									fragmentShader: fragment$12,
-  									vertexShader: vertex$12
-
-  						}));
-  			}
-
-  			return SMAAColorEdgesMaterial;
-  }(THREE.ShaderMaterial);
-
-  var areaImage = "data:image/png;base64,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";
-
-  var searchImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAAAhCAAAAABIXyLAAAAAOElEQVRIx2NgGAWjYBSMglEwEICREYRgFBZBqDCSLA2MGPUIVQETE9iNUAqLR5gIeoQKRgwXjwAAGn4AtaFeYLEAAAAASUVORK5CYII=";
-
-  var fragment$13 = "#define sampleLevelZeroOffset(t, coord, offset) texture2D(t, coord + float(offset) * texelSize, 0.0)\r\n\r\nuniform sampler2D tDiffuse;\r\nuniform sampler2D tArea;\r\nuniform sampler2D tSearch;\r\n\r\nuniform vec2 texelSize;\r\n\r\nvarying vec2 vUv;\r\nvarying vec4 vOffset[3];\r\nvarying vec2 vPixCoord;\r\n\r\nvec2 round(vec2 x) {\r\n\r\n\treturn sign(x) * floor(abs(x) + 0.5);\r\n\r\n}\r\n\r\nfloat searchLength(vec2 e, float bias, float scale) {\r\n\r\n\t// Not required if tSearch accesses are set to point.\r\n\t// const vec2 SEARCH_TEX_PIXEL_SIZE = 1.0 / vec2(66.0, 33.0);\r\n\t// e = vec2(bias, 0.0) + 0.5 * SEARCH_TEX_PIXEL_SIZE + e * vec2(scale, 1.0) * vec2(64.0, 32.0) * SEARCH_TEX_PIXEL_SIZE;\r\n\r\n\te.r = bias + e.r * scale;\r\n\r\n\treturn 255.0 * texture2D(tSearch, e, 0.0).r;\r\n\r\n}\r\n\r\nfloat searchXLeft(vec2 texCoord, float end) {\r\n\r\n\t/* @PSEUDO_GATHER4\r\n\t * This texCoord has been offset by (-0.25, -0.125) in the vertex shader to\r\n\t * sample between edge, thus fetching four edges in a row.\r\n\t * Sampling with different offsets in each direction allows to disambiguate\r\n\t * which edges are active from the four fetched ones.\r\n\t */\r\n\r\n\tvec2 e = vec2(0.0, 1.0);\r\n\r\n\tfor(int i = 0; i < SMAA_MAX_SEARCH_STEPS_INT; ++i) {\r\n\r\n\t\te = texture2D(tDiffuse, texCoord, 0.0).rg;\r\n\t\ttexCoord -= vec2(2.0, 0.0) * texelSize;\r\n\r\n\t\tif(!(texCoord.x > end && e.g > 0.8281 && e.r == 0.0)) { break; }\r\n\r\n\t}\r\n\r\n\t// Correct the previously applied offset (-0.25, -0.125).\r\n\ttexCoord.x += 0.25 * texelSize.x;\r\n\r\n\t// The searches are biased by 1, so adjust the coords accordingly.\r\n\ttexCoord.x += texelSize.x;\r\n\r\n\t// Disambiguate the length added by the last step.\r\n\ttexCoord.x += 2.0 * texelSize.x; // Undo last step.\r\n\ttexCoord.x -= texelSize.x * searchLength(e, 0.0, 0.5);\r\n\r\n\treturn texCoord.x;\r\n\r\n}\r\n\r\nfloat searchXRight(vec2 texCoord, float end) {\r\n\r\n\tvec2 e = vec2(0.0, 1.0);\r\n\r\n\tfor(int i = 0; i < SMAA_MAX_SEARCH_STEPS_INT; ++i) {\r\n\r\n\t\te = texture2D(tDiffuse, texCoord, 0.0).rg;\r\n\t\ttexCoord += vec2(2.0, 0.0) * texelSize;\r\n\r\n\t\tif(!(texCoord.x < end && e.g > 0.8281 && e.r == 0.0)) { break; }\r\n\r\n\t}\r\n\r\n\ttexCoord.x -= 0.25 * texelSize.x;\r\n\ttexCoord.x -= texelSize.x;\r\n\ttexCoord.x -= 2.0 * texelSize.x;\r\n\ttexCoord.x += texelSize.x * searchLength(e, 0.5, 0.5);\r\n\r\n\treturn texCoord.x;\r\n\r\n}\r\n\r\nfloat searchYUp(vec2 texCoord, float end) {\r\n\r\n\tvec2 e = vec2(1.0, 0.0);\r\n\r\n\tfor(int i = 0; i < SMAA_MAX_SEARCH_STEPS_INT; ++i) {\r\n\r\n\t\te = texture2D(tDiffuse, texCoord, 0.0).rg;\r\n\t\ttexCoord += vec2(0.0, 2.0) * texelSize; // Changed sign.\r\n\r\n\t\tif(!(texCoord.y > end && e.r > 0.8281 && e.g == 0.0)) { break; }\r\n\r\n\t}\r\n\r\n\ttexCoord.y -= 0.25 * texelSize.y; // Changed sign.\r\n\ttexCoord.y -= texelSize.y; // Changed sign.\r\n\ttexCoord.y -= 2.0 * texelSize.y; // Changed sign.\r\n\ttexCoord.y += texelSize.y * searchLength(e.gr, 0.0, 0.5); // Changed sign.\r\n\r\n\treturn texCoord.y;\r\n\r\n}\r\n\r\nfloat searchYDown(vec2 texCoord, float end) {\r\n\r\n\tvec2 e = vec2(1.0, 0.0);\r\n\r\n\tfor(int i = 0; i < SMAA_MAX_SEARCH_STEPS_INT; ++i ) {\r\n\r\n\t\te = texture2D(tDiffuse, texCoord, 0.0).rg;\r\n\t\ttexCoord -= vec2(0.0, 2.0) * texelSize; // Changed sign.\r\n\r\n\t\tif(!(texCoord.y < end && e.r > 0.8281 && e.g == 0.0)) { break; }\r\n\r\n\t}\r\n\r\n\ttexCoord.y += 0.25 * texelSize.y; // Changed sign.\r\n\ttexCoord.y += texelSize.y; // Changed sign.\r\n\ttexCoord.y += 2.0 * texelSize.y; // Changed sign.\r\n\ttexCoord.y -= texelSize.y * searchLength(e.gr, 0.5, 0.5); // Changed sign.\r\n\r\n\treturn texCoord.y;\r\n\r\n}\r\n\r\nvec2 area(vec2 dist, float e1, float e2, float offset) {\r\n\r\n\t// Rounding prevents precision errors of bilinear filtering.\r\n\tvec2 texCoord = SMAA_AREATEX_MAX_DISTANCE * round(4.0 * vec2(e1, e2)) + dist;\r\n\r\n\t// Scale and bias for texel space translation.\r\n\ttexCoord = SMAA_AREATEX_PIXEL_SIZE * texCoord + (0.5 * SMAA_AREATEX_PIXEL_SIZE);\r\n\r\n\t// Move to proper place, according to the subpixel offset.\r\n\ttexCoord.y += SMAA_AREATEX_SUBTEX_SIZE * offset;\r\n\r\n\treturn texture2D(tArea, texCoord, 0.0).rg;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n\tvec4 weights = vec4(0.0);\r\n\tvec4 subsampleIndices = vec4(0.0);\r\n\tvec2 e = texture2D(tDiffuse, vUv).rg;\r\n\r\n\tif(e.g > 0.0) {\r\n\r\n\t\t// Edge at north.\r\n\t\tvec2 d;\r\n\r\n\t\t// Find the distance to the left.\r\n\t\tvec2 coords;\r\n\t\tcoords.x = searchXLeft(vOffset[0].xy, vOffset[2].x);\r\n\t\tcoords.y = vOffset[1].y; // vOffset[1].y = vUv.y - 0.25 * texelSize.y (@CROSSING_OFFSET)\r\n\t\td.x = coords.x;\r\n\r\n\t\t/* Now fetch the left crossing edges, two at a time using bilinear filtering.\r\n\t\t * Sampling at -0.25 (see @CROSSING_OFFSET) enables to discern what value each edge has.\r\n\t\t */\r\n\r\n\t\tfloat e1 = texture2D(tDiffuse, coords, 0.0).r;\r\n\r\n\t\t// Find the distance to the right.\r\n\t\tcoords.x = searchXRight(vOffset[0].zw, vOffset[2].y);\r\n\t\td.y = coords.x;\r\n\r\n\t\t// Translate distances to pixel units for better interleave arithmetic and memory accesses.\r\n\t\td = d / texelSize.x - vPixCoord.x;\r\n\r\n\t\t// The area below needs a sqrt, as the areas texture is compressed quadratically.\r\n\t\tvec2 sqrtD = sqrt(abs(d));\r\n\r\n\t\t// Fetch the right crossing edges.\r\n\t\tcoords.y -= texelSize.y; // WebGL port note: Added.\r\n\t\tfloat e2 = sampleLevelZeroOffset(tDiffuse, coords, ivec2(1, 0)).r;\r\n\r\n\t\t// Pattern recognised, now get the actual area.\r\n\t\tweights.rg = area(sqrtD, e1, e2, subsampleIndices.y);\r\n\r\n\t}\r\n\r\n\tif(e.r > 0.0) {\r\n\r\n\t\t// Edge at west.\r\n\t\tvec2 d;\r\n\r\n\t\t// Find the distance to the top.\r\n\t\tvec2 coords;\r\n\r\n\t\tcoords.y = searchYUp(vOffset[1].xy, vOffset[2].z);\r\n\t\tcoords.x = vOffset[0].x; // vOffset[1].x = vUv.x - 0.25 * texelSize.x;\r\n\t\td.x = coords.y;\r\n\r\n\t\t// Fetch the top crossing edges.\r\n\t\tfloat e1 = texture2D(tDiffuse, coords, 0.0).g;\r\n\r\n\t\t// Find the distance to the bottom.\r\n\t\tcoords.y = searchYDown(vOffset[1].zw, vOffset[2].w);\r\n\t\td.y = coords.y;\r\n\r\n\t\t// Distances in pixel units.\r\n\t\td = d / texelSize.y - vPixCoord.y;\r\n\r\n\t\t// The area below needs a sqrt, as the areas texture is compressed quadratically.\r\n\t\tvec2 sqrtD = sqrt(abs(d));\r\n\r\n\t\t// Fetch the bottom crossing edges.\r\n\t\tcoords.y -= texelSize.y; // WebGL port note: Added.\r\n\t\tfloat e2 = sampleLevelZeroOffset(tDiffuse, coords, ivec2(0, 1)).g;\r\n\r\n\t\t// Get the area for this direction.\r\n\t\tweights.ba = area(sqrtD, e1, e2, subsampleIndices.x);\r\n\r\n\t}\r\n\r\n\tgl_FragColor = weights;\r\n\r\n}\r\n";
-
-  var vertex$13 = "uniform vec2 texelSize;\r\n\r\nvarying vec2 vUv;\r\nvarying vec4 vOffset[3];\r\nvarying vec2 vPixCoord;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\r\n\tvPixCoord = uv / texelSize;\r\n\r\n\t// Offsets for the searches (see @PSEUDO_GATHER4).\r\n\tvOffset[0] = uv.xyxy + texelSize.xyxy * vec4(-0.25, 0.125, 1.25, 0.125); // Changed sign in Y and W components.\r\n\tvOffset[1] = uv.xyxy + texelSize.xyxy * vec4(-0.125, 0.25, -0.125, -1.25); //Changed sign in Y and W components.\r\n\r\n\t// This indicates the ends of the loops.\r\n\tvOffset[2] = vec4(vOffset[0].xz, vOffset[1].yw) + vec4(-2.0, 2.0, -2.0, 2.0) * texelSize.xxyy * SMAA_MAX_SEARCH_STEPS_FLOAT;\r\n\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * Subpixel Morphological Antialiasing.
-   *
-   * This material computes weights for detected edges.
-   *
-   * @class SMAAWeightsMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   * @param {Vector2} [texelSize] - The absolute screen texel size.
-   */
-
-  var SMAAWeightsMaterial = function (_THREE$ShaderMaterial) {
-  		inherits(SMAAWeightsMaterial, _THREE$ShaderMaterial);
-
-  		function SMAAWeightsMaterial(texelSize) {
-  				classCallCheck(this, SMAAWeightsMaterial);
-
-  				/**
-       * The area pattern recognition image.
-       *
-       * @property areaImage
-       * @type String
-       */
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(SMAAWeightsMaterial).call(this, {
-
-  						type: "SMAAWeightsMaterial",
-
-  						defines: {
-
-  								SMAA_MAX_SEARCH_STEPS_INT: "8",
-  								SMAA_MAX_SEARCH_STEPS_FLOAT: "8.0",
-
-  								SMAA_AREATEX_MAX_DISTANCE: "16.0",
-
-  								SMAA_AREATEX_PIXEL_SIZE: "(1.0 / vec2(160.0, 560.0))",
-  								SMAA_AREATEX_SUBTEX_SIZE: "(1.0 / 7.0)"
-
-  						},
-
-  						uniforms: {
-
-  								tDiffuse: { value: null },
-  								tArea: { value: null },
-  								tSearch: { value: null },
-  								texelSize: { value: texelSize !== undefined ? texelSize : new THREE.Vector2() }
-
-  						},
-
-  						fragmentShader: fragment$13,
-  						vertexShader: vertex$13
-
-  				}));
-
-  				_this.areaImage = areaImage;
-
-  				/**
-       * The search image.
-       *
-       * @property searchImage
-       * @type String
-       */
-
-  				_this.searchImage = searchImage;
-
-  				return _this;
-  		}
-
-  		return SMAAWeightsMaterial;
-  }(THREE.ShaderMaterial);
-
-  var fragment$14 = "uniform sampler2D tDiffuse;\r\nuniform float middleGrey;\r\nuniform float maxLuminance;\r\n\r\n#ifdef ADAPTED_LUMINANCE\r\n\r\n\tuniform sampler2D luminanceMap;\r\n\r\n#else\r\n\r\n\tuniform float averageLuminance;\r\n\r\n#endif\r\n\r\nvarying vec2 vUv;\r\n\r\nconst vec3 LUM_COEFF = vec3(0.299, 0.587, 0.114);\r\nconst vec2 CENTER = vec2(0.5, 0.5);\r\n\r\nvec3 toneMap(vec3 c) {\r\n\r\n\t#ifdef ADAPTED_LUMINANCE\r\n\r\n\t\t// Get the calculated average luminance.\r\n\t\tfloat lumAvg = texture2D(luminanceMap, CENTER).r;\r\n\r\n\t#else\r\n\r\n\t\tfloat lumAvg = averageLuminance;\r\n\r\n\t#endif\r\n\r\n\t// Calculate the luminance of the current pixel.\r\n\tfloat lumPixel = dot(c, LUM_COEFF);\r\n\r\n\t// Apply the modified operator (Reinhard Eq. 4).\r\n\tfloat lumScaled = (lumPixel * middleGrey) / lumAvg;\r\n\r\n\tfloat lumCompressed = (lumScaled * (1.0 + (lumScaled / (maxLuminance * maxLuminance)))) / (1.0 + lumScaled);\r\n\r\n\treturn lumCompressed * c;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n\tvec4 texel = texture2D(tDiffuse, vUv);\r\n\tgl_FragColor = vec4(toneMap(texel.rgb), texel.a);\r\n\r\n}\r\n";
-
-  var vertex$14 = "varying vec2 vUv;\r\n\r\nvoid main() {\r\n\r\n\tvUv = uv;\r\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\r\n\r\n}\r\n";
-
-  /**
-   * Full-screen tone-mapping shader material.
-   *
-   * Reference:
-   *  http://www.graphics.cornell.edu/~jaf/publications/sig02_paper.pdf
-   *
-   * @class ToneMappingMaterial
-   * @submodule materials
-   * @extends ShaderMaterial
-   * @constructor
-   */
-
-  var ToneMappingMaterial = function (_THREE$ShaderMaterial) {
-  			inherits(ToneMappingMaterial, _THREE$ShaderMaterial);
-
-  			function ToneMappingMaterial() {
-  						classCallCheck(this, ToneMappingMaterial);
-  						return possibleConstructorReturn(this, Object.getPrototypeOf(ToneMappingMaterial).call(this, {
-
-  									type: "ToneMappingMaterial",
-
-  									uniforms: {
-
-  												tDiffuse: { value: null },
-  												luminanceMap: { value: null },
-  												averageLuminance: { value: 1.0 },
-  												maxLuminance: { value: 16.0 },
-  												middleGrey: { value: 0.6 }
-
-  									},
-
-  									fragmentShader: fragment$14,
-  									vertexShader: vertex$14
-
-  						}));
-  			}
-
-  			return ToneMappingMaterial;
-  }(THREE.ShaderMaterial);
-
-  /**
-   * An abstract pass.
-   *
-   * This class implements a dispose method that frees memory on demand.
-   * The EffectComposer calls this method when it is being destroyed.
-   *
-   * For this mechanism to work properly, please assign your render targets,
-   * materials or textures directly to your pass!
-   *
-   * You can prevent your disposable objects from being deleted by keeping them
-   * inside deeper structures such as arrays or objects.
-   *
-   * @class Pass
-   * @submodule passes
-   * @constructor
-   * @param {Scene} [scene] - The scene to render.
-   * @param {Camera} [camera] - The camera will be added to the given scene if it has no parent.
-   * @param {Mesh} [quad] - A quad that fills the screen. Used for rendering a pure 2D effect. Set this to null, if you don't need it (see RenderPass).
-   */
-
-  var Pass = function () {
-  		function Pass(scene, camera, quad) {
-  				classCallCheck(this, Pass);
-
-
-  				/**
-       * The scene to render.
-       *
-       * @property scene
-       * @type Scene
-       * @private
-       * @default Scene()
-       */
-
-  				this.scene = scene !== undefined ? scene : new THREE.Scene();
-
-  				/**
-       * The camera to render with.
-       *
-       * @property camera
-       * @type Camera
-       * @private
-       * @default OrthographicCamera(-1, 1, 1, -1, 0, 1)
-       */
-
-  				this.camera = camera !== undefined ? camera : new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-  				/**
-       * The quad mesh to use for rendering.
-       *
-       * Assign your shader material to this mesh!
-       *
-       * @property quad
-       * @type Mesh
-       * @private
-       * @default Mesh(PlaneBufferGeometry(2, 2), null)
-       * @example
-       *  this.quad.material = this.myMaterial;
-       */
-
-  				this.quad = quad !== undefined ? quad : new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), null);
-
-  				/**
-       * Indicates whether the read and write buffers should be swapped after this
-       * pass has finished rendering.
-       *
-       * Set this to true if this pass renders to the write buffer so that a
-       * following pass can find the result in the read buffer.
-       *
-       * @property needsSwap
-       * @type Boolean
-       * @private
-       * @default false
-       */
-
-  				this.needsSwap = false;
-
-  				/**
-       * Enabled flag.
-       *
-       * @property enabled
-       * @type Boolean
-       * @default true
-       */
-
-  				this.enabled = true;
-
-  				/**
-       * Render to screen flag.
-       *
-       * @property renderToScreen
-       * @type Boolean
-       * @default false
-       */
-
-  				this.renderToScreen = false;
-
-  				// Finally, add the camera and the quad to the scene.
-  				if (this.scene !== null) {
-
-  						if (this.camera !== null && this.camera.parent === null) {
-  								this.scene.add(this.camera);
-  						}
-  						if (this.quad !== null) {
-  								this.scene.add(this.quad);
-  						}
-  				}
-  		}
-
-  		/**
-     * Renders the effect.
-     *
-     * This is an abstract method that must be overridden.
-     *
-     * @method render
-     * @throws {Error} An error is thrown if the method is not overridden.
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - A read buffer. Contains the result of the previous pass.
-     * @param {WebGLRenderTarget} writeBuffer - A write buffer. Normally used as the render target.
-     * @param {Number} [delta] - The delta time.
-     * @param {Boolean} [maskActive] - Indicates whether a stencil test mask is active or not.
+    /**
+     * Those who extend this class will put their DOM elements in here.
+     * @type {DOMElement}
      */
+    this.domElement = document.createElement('div');
 
-  		createClass(Pass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer, delta, maskActive) {
-
-  						throw new Error("Render method not implemented!");
-  				}
-
-  				/**
-       * Performs initialisation tasks.
-       *
-       * By implementing this abstract method you gain access to the renderer.
-       * You'll also be able to configure your custom render targets to use the
-       * appropriate format (RGB or RGBA).
-       *
-       * The provided renderer can be used to warm up special off-screen render
-       * targets by performing a preliminary render operation.
-       *
-       * The effect composer calls this method when this pass is added to its queue.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       * @param {Boolean} alpha - Whether the renderer uses the alpha channel or not.
-       */
-
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer, alpha) {}
-
-  				/**
-       * Updates this pass with the renderer's size.
-       *
-       * This is an abstract method that may be overriden in case you want to be
-       * informed about the main render size.
-       *
-       * The effect composer calls this method when its own size is updated.
-       *
-       * @method setSize
-       * @param {Number} width - The renderer's width.
-       * @param {Number} height - The renderer's height.
-       * @example
-       *  this.myRenderTarget.setSize(width, height);
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {}
-
-  				/**
-       * Performs a shallow search for properties that define a dispose method and
-       * deletes them. The pass will be inoperative after this method was called!
-       *
-       * Disposable objects:
-       *  - render targets
-       *  - materials
-       *  - textures
-       *
-       * The EffectComposer calls this method automatically when it is being
-       * destroyed. You may, however, use it independently to free memory
-       * when you are certain that you don't need this pass anymore.
-       *
-       * @method dispose
-       */
-
-  		}, {
-  				key: "dispose",
-  				value: function dispose() {
-
-  						var i = void 0,
-  						    p = void 0;
-  						var keys = Object.keys(this);
-
-  						for (i = keys.length - 1; i >= 0; --i) {
-
-  								p = this[keys[i]];
-
-  								if (p !== null && typeof p.dispose === "function") {
-
-  										p.dispose();
-  										this[keys[i]] = null;
-  								}
-  						}
-  				}
-  		}]);
-  		return Pass;
-  }();
-
-  /**
-   * A bloom pass.
-   *
-   * This pass renders a scene with superimposed blur by utilising the fast Kawase
-   * convolution approach.
-   *
-   * @class BloomPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Object} [options] - The options.
-   * @param {Number} [options.resolutionScale=0.5] - The render texture resolution scale, relative to the screen render size.
-   * @param {Number} [options.blurriness=1.0] - The scale of the blur.
-   * @param {Number} [options.strength=1.0] - The bloom strength.
-   * @param {Number} [options.distinction=1.0] - The luminance distinction factor. Raise this value to bring out the brighter elements in the scene.
-   */
-
-  var BloomPass = function (_Pass) {
-  		inherits(BloomPass, _Pass);
-
-  		function BloomPass(options) {
-  				classCallCheck(this, BloomPass);
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(BloomPass).call(this));
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-
-  				/**
-       * A render target.
-       *
-       * @property renderTargetX
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetX = new THREE.WebGLRenderTarget(1, 1, {
-  						minFilter: THREE.LinearFilter,
-  						magFilter: THREE.LinearFilter,
-  						generateMipmaps: false,
-  						stencilBuffer: false,
-  						depthBuffer: false
-  				});
-
-  				/**
-       * A second render target.
-       *
-       * @property renderTargetY
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetY = _this.renderTargetX.clone();
-
-  				/**
-       * The resolution scale.
-       *
-       * You need to call the setSize method of the EffectComposer after changing
-       * this value.
-       *
-       * @property resolutionScale
-       * @type Number
-       * @default 0.5
-       */
-
-  				_this.resolutionScale = options.resolutionScale === undefined ? 0.5 : options.resolutionScale;
-
-  				/**
-       * Combine shader material.
-       *
-       * @property combineMaterial
-       * @type CombineMaterial
-       * @private
-       */
-
-  				_this.combineMaterial = new CombineMaterial();
-
-  				if (options.strength !== undefined) {
-  						_this.combineMaterial.uniforms.opacity2.value = options.strength;
-  				}
-
-  				/**
-       * Copy shader material.
-       *
-       * @property copyMaterial
-       * @type CopyMaterial
-       * @private
-       */
-
-  				_this.copyMaterial = new CopyMaterial();
-  				_this.copyMaterial.blending = THREE.AdditiveBlending;
-  				_this.copyMaterial.transparent = true;
-
-  				if (options.strength !== undefined) {
-  						_this.copyMaterial.uniforms.opacity.value = options.strength;
-  				}
-
-  				/**
-       * Luminance shader material.
-       *
-       * @property luminosityMaterial
-       * @type LuminosityMaterial
-       * @private
-       */
-
-  				_this.luminosityMaterial = new LuminosityMaterial(true);
-
-  				if (options.distinction !== undefined) {
-  						_this.luminosityMaterial.uniforms.distinction.value = options.distinction;
-  				}
-
-  				/**
-       * Convolution shader material.
-       *
-       * @property convolutionMaterial
-       * @type ConvolutionMaterial
-       * @private
-       */
-
-  				_this.convolutionMaterial = new ConvolutionMaterial();
-
-  				_this.blurriness = options.blurriness;
-
-  				return _this;
-  		}
-
-  		/**
-     * The strength of the preliminary blur phase.
-     *
-     * @property blurriness
-     * @type Number
-     * @default 1.0
+    /**
+     * The object to manipulate
+     * @type {Object}
      */
+    this.object = object;
 
-  		createClass(BloomPass, [{
-  				key: "render",
-
-
-  				/**
-       * Renders the effect.
-       *
-       * Applies a luminance filter and convolution blur to the read buffer and
-       * renders the result into a seperate render target. The result is additively
-       * blended with the read buffer.
-       *
-       * @method render
-       * @param {WebGLRenderer} renderer - The renderer to use.
-       * @param {WebGLRenderTarget} readBuffer - The read buffer.
-       */
-
-  				value: function render(renderer, readBuffer) {
-
-  						var state = renderer.state;
-
-  						// Luminance filter.
-  						this.quad.material = this.luminosityMaterial;
-  						this.luminosityMaterial.uniforms.tDiffuse.value = readBuffer.texture;
-  						state.setDepthWrite(true);
-  						renderer.render(this.scene, this.camera, this.renderTargetX);
-  						state.setDepthWrite(false);
-
-  						// Convolution phase.
-  						this.quad.material = this.convolutionMaterial;
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetX.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetY);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetY.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetX);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetX.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetY);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetY.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetX);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetX.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetY);
-
-  						// Render the original scene with superimposed blur.
-  						if (this.renderToScreen) {
-
-  								this.quad.material = this.combineMaterial;
-  								this.combineMaterial.uniforms.texture1.value = readBuffer.texture;
-  								this.combineMaterial.uniforms.texture2.value = this.renderTargetY.texture;
-
-  								renderer.render(this.scene, this.camera);
-  						} else {
-
-  								this.quad.material = this.copyMaterial;
-  								this.copyMaterial.uniforms.tDiffuse.value = this.renderTargetY.texture;
-
-  								renderer.render(this.scene, this.camera, readBuffer, false);
-  						}
-  				}
-
-  				/**
-       * Adjusts the format and size of the render targets.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       * @param {Boolean} alpha - Whether the renderer uses the alpha channel or not.
-       */
-
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer, alpha) {
-
-  						var size = renderer.getSize();
-  						this.setSize(size.width, size.height);
-
-  						if (!alpha) {
-
-  								this.renderTargetX.texture.format = THREE.RGBFormat;
-  								this.renderTargetY.texture.format = THREE.RGBFormat;
-  						}
-  				}
-
-  				/**
-       * Updates this pass with the renderer's size.
-       *
-       * @method setSize
-       * @param {Number} width - The width.
-       * @param {Number} height - The height.
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
-
-  						width = Math.floor(width * this.resolutionScale);
-  						height = Math.floor(height * this.resolutionScale);
-
-  						if (width <= 0) {
-  								width = 1;
-  						}
-  						if (height <= 0) {
-  								height = 1;
-  						}
-
-  						this.renderTargetX.setSize(width, height);
-  						this.renderTargetY.setSize(width, height);
-
-  						this.convolutionMaterial.setTexelSize(1.0 / width, 1.0 / height);
-  				}
-  		}, {
-  				key: "blurriness",
-  				get: function get() {
-  						return this.convolutionMaterial.scale;
-  				},
-  				set: function set(x) {
-
-  						if (typeof x === "number") {
-
-  								this.convolutionMaterial.scale = x;
-  						}
-  				}
-  		}]);
-  		return BloomPass;
-  }(Pass);
-
-  /**
-   * Depth of Field pass using a bokeh shader.
-   *
-   * @class BokehPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {PerspectiveCamera} camera - The main camera. Used to adjust the near and far plane settings.
-   * @param {Object} [options] - Additional parameters.
-   * @param {Number} [options.focus=1.0] - Focus distance.
-   * @param {Number} [options.aperture=0.025] - Camera aperture scale. Bigger values for shallower depth of field.
-   * @param {Number} [options.maxBlur=1.0] - Maximum blur strength.
-   */
-
-  var BokehPass = function (_Pass) {
-  	inherits(BokehPass, _Pass);
-
-  	function BokehPass(camera, options) {
-  		classCallCheck(this, BokehPass);
-
-  		var _this = possibleConstructorReturn(this, Object.getPrototypeOf(BokehPass).call(this));
-
-  		_this.needsSwap = true;
-
-  		if (options === undefined) {
-  			options = {};
-  		}
-
-  		/**
-     * Bokeh shader material.
-     *
-     * @property bokehMaterial
-     * @type BokehMaterial
-     * @private
+    /**
+     * The name of the property to manipulate
+     * @type {String}
      */
+    this.property = property;
 
-  		_this.bokehMaterial = new BokehMaterial(camera, options);
-
-  		_this.quad.material = _this.bokehMaterial;
-
-  		return _this;
-  	}
-
-  	/**
-    * Renders the effect.
-    *
-    * @method render
-    * @param {WebGLRenderer} renderer - The renderer to use.
-    * @param {WebGLRenderTarget} readBuffer - The read buffer.
-    * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-    */
-
-  	createClass(BokehPass, [{
-  		key: "render",
-  		value: function render(renderer, readBuffer, writeBuffer) {
-
-  			this.bokehMaterial.uniforms.tDiffuse.value = readBuffer.texture;
-  			this.bokehMaterial.uniforms.tDepth.value = readBuffer.depthTexture;
-
-  			if (this.renderToScreen) {
-
-  				renderer.render(this.scene, this.camera);
-  			} else {
-
-  				renderer.render(this.scene, this.camera, writeBuffer, false);
-  			}
-  		}
-
-  		/**
-     * Adjusts the format and size of the render targets.
-     *
-     * @method initialise
-     * @param {WebGLRenderer} renderer - The renderer.
+    /**
+     * The function to be called on change.
+     * @type {Function}
+     * @ignore
      */
+    this.__onChange = undefined;
 
-  	}, {
-  		key: "initialise",
-  		value: function initialise(renderer) {
-
-  			var size = renderer.getSize();
-  			this.setSize(size.width, size.height);
-  		}
-
-  		/**
-     * Updates this pass with the renderer's size.
-     *
-     * @method setSize
-     * @param {Number} width - The width.
-     * @param {Number} height - The height.
+    /**
+     * The function to be called on finishing change.
+     * @type {Function}
+     * @ignore
      */
+    this.__onFinishChange = undefined;
 
-  	}, {
-  		key: "setSize",
-  		value: function setSize(width, height) {
-
-  			this.bokehMaterial.uniforms.aspect.value = width / height;
-  		}
-  	}]);
-  	return BokehPass;
-  }(Pass);
-
-  /**
-   * Depth of Field pass version 2.
-   *
-   * This pass yields more realistic results but is also more demanding.
-   *
-   * @class Bokeh2Pass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {PerspectiveCamera} camera - The main camera. Used to adjust near and far plane and focal length settings.
-   * @param {Object} [options] - Additional parameters.
-   * @param {Number} [options.rings=3] - The amount of blur rings.
-   * @param {Number} [options.samples=4] - The amount of samples per ring.
-   * @param {Boolean} [options.showFocus=false] - Whether the focus point should be highlighted.
-   * @param {Boolean} [options.manualDoF=false] - Enables manual depth of field blur.
-   * @param {Boolean} [options.vignette=false] - Enables a vignette effect.
-   * @param {Boolean} [options.pentagon=false] - Enable to use a pentagonal shape to scale gathered texels.
-   * @param {Boolean} [options.shaderFocus=true] - Disable if you compute your own focalDepth (in metres!).
-   * @param {Boolean} [options.noise=true] - Disable if you don't want noise patterns for dithering.
-   */
-
-  var Bokeh2Pass = function (_Pass) {
-  	inherits(Bokeh2Pass, _Pass);
-
-  	function Bokeh2Pass(camera, options) {
-  		classCallCheck(this, Bokeh2Pass);
-
-  		var _this = possibleConstructorReturn(this, Object.getPrototypeOf(Bokeh2Pass).call(this));
-
-  		if (options === undefined) {
-  			options = {};
-  		}
-
-  		/**
-     * Bokeh shader material.
-     *
-     * @property bokehMaterial
-     * @type BokehMaterial
-     * @private
-     */
-
-  		_this.bokehMaterial = new Bokeh2Material(camera, options);
-
-  		_this.quad.material = _this.bokehMaterial;
-
-  		return _this;
-  	}
-
-  	/**
-    * Renders the effect.
-    *
-    * @method render
-    * @param {WebGLRenderer} renderer - The renderer to use.
-    * @param {WebGLRenderTarget} readBuffer - The read buffer.
-    * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-    */
-
-  	createClass(Bokeh2Pass, [{
-  		key: "render",
-  		value: function render(renderer, readBuffer, writeBuffer) {
-
-  			this.bokehMaterial.uniforms.tDiffuse.value = readBuffer.texture;
-  			this.bokehMaterial.uniforms.tDepth.value = readBuffer.depthTexture;
-
-  			if (this.renderToScreen) {
-
-  				renderer.render(this.scene, this.camera);
-  			} else {
-
-  				renderer.render(this.scene, this.camera, writeBuffer, false);
-  			}
-  		}
-
-  		/**
-     * Adjusts the format and size of the render targets.
-     *
-     * @method initialise
-     * @param {WebGLRenderer} renderer - The renderer.
-     */
-
-  	}, {
-  		key: "initialise",
-  		value: function initialise(renderer) {
-
-  			var size = renderer.getSize();
-  			this.setSize(size.width, size.height);
-  		}
-
-  		/**
-     * Updates this pass with the renderer's size.
-     *
-     * @method setSize
-     * @param {Number} width - The width.
-     * @param {Number} height - The height.
-     */
-
-  	}, {
-  		key: "setSize",
-  		value: function setSize(width, height) {
-
-  			this.bokehMaterial.setTexelSize(1.0 / width, 1.0 / height);
-  		}
-  	}]);
-  	return Bokeh2Pass;
-  }(Pass);
-
-  /**
-   * A clear mask pass.
-   *
-   * @class ClearMaskPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   */
-
-  var ClearMaskPass = function (_Pass) {
-  	inherits(ClearMaskPass, _Pass);
-
-  	function ClearMaskPass() {
-  		classCallCheck(this, ClearMaskPass);
-  		return possibleConstructorReturn(this, Object.getPrototypeOf(ClearMaskPass).call(this, null, null, null));
-  	}
-
-  	/**
-    * This pass disables the stencil test.
-    *
-    * @method render
-    * @param {WebGLRenderer} renderer - The renderer to use.
-    */
-
-  	createClass(ClearMaskPass, [{
-  		key: "render",
-  		value: function render(renderer) {
-
-  			renderer.context.disable(renderer.context.STENCIL_TEST);
-  		}
-  	}]);
-  	return ClearMaskPass;
-  }(Pass);
-
-  /**
-   * A render pass.
-   *
-   * @class DotScreenPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Object} [options] - The options.
-   * @param {Number} [options.angle=1.57] - The angle of the pattern.
-   * @param {Number} [options.scale=1.0] - The scale of the overall effect.
-   * @param {Number} [options.intensity=1.0] - The intensity of the effect.
-   * @param {Boolean} [options.average=false] - Whether the shader should output a colour average (black and white).
-   */
-
-  var DotScreenPass = function (_Pass) {
-  		inherits(DotScreenPass, _Pass);
-
-  		function DotScreenPass(options) {
-  				classCallCheck(this, DotScreenPass);
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(DotScreenPass).call(this));
-
-  				_this.needsSwap = true;
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-
-  				/**
-       * Dot screen shader material description.
-       *
-       * @property material
-       * @type DotScreenMaterial
-       * @private
-       */
-
-  				_this.material = new DotScreenMaterial(options.average);
-
-  				if (options.angle !== undefined) {
-  						_this.material.uniforms.angle.value = options.angle;
-  				}
-  				if (options.scale !== undefined) {
-  						_this.material.uniforms.scale.value = options.scale;
-  				}
-  				if (options.intensity !== undefined) {
-  						_this.material.uniforms.intensity.value = options.intensity;
-  				}
-
-  				_this.quad.material = _this.material;
-
-  				return _this;
-  		}
-
-  		/**
-     * Renders the effect.
-     *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
-     * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-     */
-
-  		createClass(DotScreenPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer) {
-
-  						this.material.uniforms.tDiffuse.value = readBuffer.texture;
-
-  						if (this.renderToScreen) {
-
-  								renderer.render(this.scene, this.camera);
-  						} else {
-
-  								renderer.render(this.scene, this.camera, writeBuffer, false);
-  						}
-  				}
-
-  				/**
-       * Adjusts the size of the effect.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       */
-
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer) {
-
-  						var size = renderer.getSize();
-  						this.setSize(size.width, size.height);
-  				}
-
-  				/**
-       * Updates this pass with the renderer's size.
-       *
-       * @method setSize
-       * @param {Number} width - The width.
-       * @param {Number} heght - The height.
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
-
-  						if (width <= 0) {
-  								width = 1;
-  						}
-  						if (height <= 0) {
-  								height = 1;
-  						}
-
-  						this.material.uniforms.offsetRepeat.value.z = width;
-  						this.material.uniforms.offsetRepeat.value.w = height;
-  				}
-  		}]);
-  		return DotScreenPass;
-  }(Pass);
-
-  /**
-   * A film pass providing various cinematic effects.
-   *
-   * @class FilmPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Object} [options] - The options.
-   * @param {Boolean} [options.greyscale=false] - Enable greyscale effect. Greyscale and sepia are mutually exclusive.
-   * @param {Boolean} [options.sepia=false] - Enable sepia effect. Greyscale and sepia are mutually exclusive.
-   * @param {Boolean} [options.vignette=false] - Apply vignette effect.
-   * @param {Boolean} [options.eskil=false] - Use Eskil's vignette approach. The default looks dusty while Eskil looks more burned out.
-   * @param {Boolean} [options.scanlines=true] - Show scanlines.
-   * @param {Boolean} [options.noise=true] - Show noise-based film grain.
-   * @param {Number} [options.noiseIntensity=0.5] - The noise intensity. 0.0 to 1.0.
-   * @param {Number} [options.scanlineIntensity=0.05] - The scanline intensity. 0.0 to 1.0.
-   * @param {Number} [options.scanlineDensity=1.0] - The number of scanlines in percent, relative to the screen height.
-   * @param {Number} [options.greyscaleIntensity=1.0] - The intensity of the greyscale effect.
-   * @param {Number} [options.sepiaIntensity=1.0] - The intensity of the sepia effect.
-   * @param {Number} [options.vignetteOffset=1.0] - The offset of the vignette effect.
-   * @param {Number} [options.vignetteDarkness=1.0] - The darkness of the vignette effect.
-   */
-
-  var FilmPass = function (_Pass) {
-  		inherits(FilmPass, _Pass);
-
-  		function FilmPass(options) {
-  				classCallCheck(this, FilmPass);
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(FilmPass).call(this));
-
-  				_this.needsSwap = true;
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-
-  				/**
-       * Film shader material.
-       *
-       * @property material
-       * @type FilmMaterial
-       * @private
-       */
-
-  				_this.material = new FilmMaterial(options);
-
-  				_this.quad.material = _this.material;
-
-  				/**
-       * The amount of scanlines in percent, relative to the screen height.
-       *
-       * You need to call the setSize method of the EffectComposer after changing
-       * this value.
-       *
-       * @property scanlineDensity
-       * @type Number
-       * @default 1.25
-       */
-
-  				_this.scanlineDensity = options.scanlineDensity === undefined ? 1.25 : options.scanlineDensity;
-
-  				return _this;
-  		}
-
-  		/**
-     * Renders the effect.
-     *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
-     * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-     * @param {Number} delta - The render delta time.
-     */
-
-  		createClass(FilmPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer, delta) {
-
-  						this.material.uniforms.tDiffuse.value = readBuffer.texture;
-  						this.material.uniforms.time.value += delta;
-
-  						if (this.renderToScreen) {
-
-  								renderer.render(this.scene, this.camera);
-  						} else {
-
-  								renderer.render(this.scene, this.camera, writeBuffer, false);
-  						}
-  				}
-
-  				/**
-       * Adjusts the scanline count using the renderer's height.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       */
-
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer) {
-
-  						var size = renderer.getSize();
-  						this.setSize(size.width, size.height);
-  				}
-
-  				/**
-       * Adjusts the scanline count using the renderer's height.
-       *
-       * @method setSize
-       * @param {Number} width - The width.
-       * @param {Number} height - The height.
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
-
-  						this.material.uniforms.scanlineCount.value = Math.round(height * this.scanlineDensity);
-  				}
-  		}]);
-  		return FilmPass;
-  }(Pass);
-
-  /**
-   * A glitch pass.
-   *
-   * @class GlitchPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Object} [options] - The options.
-   * @param {Texture} [options.perturbMap] - A perturbation map.
-   * @param {Number} [options.dtSize=64] - The size of the generated noise map. Will be ignored if a perturbation map is provided.
-   */
-
-  var GlitchPass = function (_Pass) {
-  		inherits(GlitchPass, _Pass);
-
-  		function GlitchPass(options) {
-  				classCallCheck(this, GlitchPass);
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(GlitchPass).call(this));
-
-  				_this.needsSwap = true;
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-  				if (options.dtSize === undefined) {
-  						options.dtSize = 64;
-  				}
-
-  				/**
-       * Glitch shader material.
-       *
-       * @property material
-       * @type GlitchMaterial
-       * @private
-       */
-
-  				_this.material = new GlitchMaterial();
-
-  				_this.quad.material = _this.material;
-
-  				/**
-       * A perturbation map.
-       *
-       * If none is provided, a noise texture will be created.
-       * This texture will automatically be destroyed when the EffectComposer is
-       * deleted.
-       *
-       * @property perturbMap
-       * @type Texture
-       */
-
-  				if (options.perturbMap !== undefined) {
-
-  						_this.perturbMap = options.perturbMap;
-  						_this.perturbMap.generateMipmaps = false;
-  						_this.material.uniforms.tPerturb.value = _this.perturbMap;
-  				} else {
-
-  						_this.perturbMap = null;
-  						_this.generatePerturbMap(options.dtSize);
-  				}
-
-  				/**
-       * The effect mode.
-       *
-       * Check the Mode enumeration for available modes.
-       *
-       * @property mode
-       * @type GlitchPass.Mode
-       * @default GlitchPass.Mode.SPORADIC
-       */
-
-  				_this.mode = GlitchPass.Mode.SPORADIC;
-
-  				/**
-       * Counter for glitch activation/deactivation.
-       *
-       * @property counter
-       * @type Number
-       * @private
-       */
-
-  				_this.counter = 0;
-
-  				/**
-       * A random break point for the sporadic glitch activation.
-       *
-       * @property breakPoint
-       * @type Number
-       * @private
-       */
-
-  				_this.breakPoint = 0;
-  				_this.generateTrigger();
-
-  				return _this;
-  		}
-
-  		/**
-     * Renders the effect.
-     *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
-     * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-     */
-
-  		createClass(GlitchPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer) {
-
-  						var uniforms = this.material.uniforms;
-
-  						uniforms.tDiffuse.value = readBuffer.texture;
-  						uniforms.seed.value = Math.random();
-  						uniforms.active.value = true;
-
-  						if (this.counter % this.breakPoint === 0 || this.mode === GlitchPass.Mode.CONSTANT_WILD) {
-
-  								uniforms.amount.value = Math.random() / 30.0;
-  								uniforms.angle.value = THREE.Math.randFloat(-Math.PI, Math.PI);
-  								uniforms.seedX.value = THREE.Math.randFloat(-1.0, 1.0);
-  								uniforms.seedY.value = THREE.Math.randFloat(-1.0, 1.0);
-  								uniforms.distortionX.value = THREE.Math.randFloat(0.0, 1.0);
-  								uniforms.distortionY.value = THREE.Math.randFloat(0.0, 1.0);
-  								this.counter = 0;
-  								this.generateTrigger();
-  						} else if (this.counter % this.breakPoint < this.breakPoint / 5 || this.mode === GlitchPass.Mode.CONSTANT_MILD) {
-
-  								uniforms.amount.value = Math.random() / 90.0;
-  								uniforms.angle.value = THREE.Math.randFloat(-Math.PI, Math.PI);
-  								uniforms.distortionX.value = THREE.Math.randFloat(0.0, 1.0);
-  								uniforms.distortionY.value = THREE.Math.randFloat(0.0, 1.0);
-  								uniforms.seedX.value = THREE.Math.randFloat(-0.3, 0.3);
-  								uniforms.seedY.value = THREE.Math.randFloat(-0.3, 0.3);
-  						} else if (this.mode === GlitchPass.Mode.SPORADIC) {
-
-  								uniforms.active.value = false;
-  						}
-
-  						++this.counter;
-
-  						if (this.renderToScreen) {
-
-  								renderer.render(this.scene, this.camera);
-  						} else {
-
-  								renderer.render(this.scene, this.camera, writeBuffer, false);
-  						}
-  				}
-
-  				/**
-       * Creates a random break point for the glitch effect.
-       *
-       * @method generateTrigger
-       * @private
-       */
-
-  		}, {
-  				key: "generateTrigger",
-  				value: function generateTrigger() {
-
-  						this.breakPoint = THREE.Math.randInt(120, 240);
-  				}
-
-  				/**
-       * Destroys the currently set texture and generates a simple noise map.
-       *
-       * @method generatePerturbMap
-       * @private
-       * @param {Number} size - The texture size.
-       */
-
-  		}, {
-  				key: "generatePerturbMap",
-  				value: function generatePerturbMap(size) {
-
-  						var i = void 0,
-  						    x = void 0;
-  						var l = size * size;
-  						var data = new Float32Array(l * 3);
-
-  						for (i = 0; i < l; ++i) {
-
-  								x = THREE.Math.randFloat(0, 1);
-
-  								data[i * 3] = x;
-  								data[i * 3 + 1] = x;
-  								data[i * 3 + 2] = x;
-  						}
-
-  						if (this.perturbMap !== null) {
-  								this.perturbMap.dispose();
-  						}
-
-  						this.perturbMap = new THREE.DataTexture(data, size, size, THREE.RGBFormat, THREE.FloatType);
-  						this.perturbMap.needsUpdate = true;
-
-  						this.material.uniforms.tPerturb.value = this.perturbMap;
-  				}
-  		}]);
-  		return GlitchPass;
-  }(Pass);
-
-  /**
-   * A glitch mode enumeration.
-   *
-   * SPORADIC is the default mode (randomly timed glitches).
-   *
-   * @property GlitchPass.Mode
-   * @type Object
-   * @static
-   * @final
-   */
-
-  GlitchPass.Mode = {
-  		SPORADIC: 0,
-  		CONSTANT_MILD: 1,
-  		CONSTANT_WILD: 2
   };
 
+  common.extend(
+
+      Controller.prototype,
+
+      /** @lends dat.controllers.Controller.prototype */
+      {
+
+        /**
+         * Specify that a function fire every time someone changes the value with
+         * this Controller.
+         *
+         * @param {Function} fnc This function will be called whenever the value
+         * is modified via this Controller.
+         * @returns {dat.controllers.Controller} this
+         */
+        onChange: function(fnc) {
+          this.__onChange = fnc;
+          return this;
+        },
+
+        /**
+         * Specify that a function fire every time someone "finishes" changing
+         * the value wih this Controller. Useful for values that change
+         * incrementally like numbers or strings.
+         *
+         * @param {Function} fnc This function will be called whenever
+         * someone "finishes" changing the value via this Controller.
+         * @returns {dat.controllers.Controller} this
+         */
+        onFinishChange: function(fnc) {
+          this.__onFinishChange = fnc;
+          return this;
+        },
+
+        /**
+         * Change the value of <code>object[property]</code>
+         *
+         * @param {Object} newValue The new value of <code>object[property]</code>
+         */
+        setValue: function(newValue) {
+          this.object[this.property] = newValue;
+          if (this.__onChange) {
+            this.__onChange.call(this, newValue);
+          }
+          this.updateDisplay();
+          return this;
+        },
+
+        /**
+         * Gets the value of <code>object[property]</code>
+         *
+         * @returns {Object} The current value of <code>object[property]</code>
+         */
+        getValue: function() {
+          return this.object[this.property];
+        },
+
+        /**
+         * Refreshes the visual display of a Controller in order to keep sync
+         * with the object's current value.
+         * @returns {dat.controllers.Controller} this
+         */
+        updateDisplay: function() {
+          return this;
+        },
+
+        /**
+         * @returns {Boolean} true if the value has deviated from initialValue
+         */
+        isModified: function() {
+          return this.initialValue !== this.getValue()
+        }
+
+      }
+
+  );
+
+  return Controller;
+
+
+})(dat.utils.common);
+
+
+dat.dom.dom = (function (common) {
+
+  var EVENT_MAP = {
+    'HTMLEvents': ['change'],
+    'MouseEvents': ['click','mousemove','mousedown','mouseup', 'mouseover'],
+    'KeyboardEvents': ['keydown']
+  };
+
+  var EVENT_MAP_INV = {};
+  common.each(EVENT_MAP, function(v, k) {
+    common.each(v, function(e) {
+      EVENT_MAP_INV[e] = k;
+    });
+  });
+
+  var CSS_VALUE_PIXELS = /(\d+(\.\d+)?)px/;
+
+  function cssValueToPixels(val) {
+
+    if (val === '0' || common.isUndefined(val)) return 0;
+
+    var match = val.match(CSS_VALUE_PIXELS);
+
+    if (!common.isNull(match)) {
+      return parseFloat(match[1]);
+    }
+
+    // TODO ...ems? %?
+
+    return 0;
+
+  }
+
   /**
-   * Used for saving the renderer's clear color.
-   *
-   * @property CLEAR_COLOR
-   * @type Color
-   * @private
-   * @static
+   * @namespace
+   * @member dat.dom
    */
+  var dom = {
 
-  var CLEAR_COLOR = new THREE.Color();
-
-  /**
-   * A crepuscular rays pass.
-   *
-   * @class GodRaysPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Scene} scene - The main scene.
-   * @param {Camera} camera - The main camera.
-   * @param {Vector3} lightSource - The main light source.
-   * @param {Object} [options] - The options.
-   * @param {Number} [options.density=0.96] - The density of the light rays.
-   * @param {Number} [options.decay=0.93] - An illumination decay factor.
-   * @param {Number} [options.weight=0.4] - A light ray weight factor.
-   * @param {Number} [options.exposure=0.6] - A constant attenuation coefficient.
-   * @param {Number} [options.clampMax=1.0] - An upper bound for the saturation of the overall effect.
-   * @param {Number} [options.intensity=1.0] - A constant factor for additive blending.
-   * @param {Number} [options.blurriness=0.1] - The strength of the preliminary blur phase.
-   * @param {Number} [options.resolutionScale=0.5] - The render texture resolution scale, relative to the screen render size.
-   * @param {Number} [options.samples=60] - The number of samples per pixel.
-   */
-
-  var GodRaysPass = function (_Pass) {
-  		inherits(GodRaysPass, _Pass);
-
-  		function GodRaysPass(scene, camera, lightSource, options) {
-  				classCallCheck(this, GodRaysPass);
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(GodRaysPass).call(this));
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-
-  				/**
-       * A render target for rendering the masked scene.
-       *
-       * @property renderTargetMask
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetMask = new THREE.WebGLRenderTarget(1, 1, {
-  						minFilter: THREE.LinearFilter,
-  						magFilter: THREE.LinearFilter,
-  						generateMipmaps: false
-  				});
-
-  				/**
-       * A render target.
-       *
-       * @property renderTargetX
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetX = _this.renderTargetMask.clone();
-  				_this.renderTargetX.stencilBuffer = false;
-  				_this.renderTargetX.depthBuffer = false;
-
-  				/**
-       * A second render target.
-       *
-       * @property renderTargetY
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetY = _this.renderTargetX.clone();
-
-  				/**
-       * The resolution scale.
-       *
-       * You need to call the setSize method of the EffectComposer after changing
-       * this value.
-       *
-       * @property resolutionScale
-       * @type Number
-       * @default 0.5
-       */
-
-  				_this.resolutionScale = options.resolutionScale === undefined ? 0.5 : options.resolutionScale;
-
-  				/**
-       * The light source.
-       *
-       * @property lightSource
-       * @type Object3D
-       */
-
-  				_this.lightSource = lightSource !== undefined ? lightSource : new THREE.Object3D();
-
-  				/**
-       * The light position in screen space.
-       *
-       * @property screenPosition
-       * @type Vector3
-       * @private
-       */
-
-  				_this.screenPosition = new THREE.Vector3();
-
-  				/**
-       * A convolution blur shader material.
-       *
-       * @property convolutionMaterial
-       * @type ConvolutionMaterial
-       * @private
-       */
-
-  				_this.convolutionMaterial = new ConvolutionMaterial();
-
-  				_this.blurriness = options.blurriness !== undefined ? options.blurriness : 0.1;
-
-  				/**
-       * A combine shader material used for rendering to screen.
-       *
-       * @property combineMaterial
-       * @type CombineMaterial
-       * @private
-       */
-
-  				_this.combineMaterial = new CombineMaterial();
-
-  				/**
-       * A copy shader material used for rendering to texture.
-       *
-       * @property copyMaterial
-       * @type CopyMaterial
-       * @private
-       */
-
-  				_this.copyMaterial = new CopyMaterial();
-  				_this.copyMaterial.blending = THREE.AdditiveBlending;
-  				_this.copyMaterial.transparent = true;
-
-  				/**
-       * A material used for masking the scene objects.
-       *
-       * @property maskMaterial
-       * @type MeshBasicMaterial
-       * @private
-       */
-
-  				_this.maskMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-
-  				/**
-       * God rays shader material.
-       *
-       * @property godRaysMaterial
-       * @type GodRaysMaterial
-       * @private
-       */
-
-  				_this.godRaysMaterial = new GodRaysMaterial();
-  				_this.godRaysMaterial.uniforms.lightPosition.value = _this.screenPosition;
-
-  				if (options.exposure !== undefined) {
-  						_this.godRaysMaterial.uniforms.exposure.value = options.exposure;
-  				}
-  				if (options.density !== undefined) {
-  						_this.godRaysMaterial.uniforms.density.value = options.density;
-  				}
-  				if (options.decay !== undefined) {
-  						_this.godRaysMaterial.uniforms.decay.value = options.decay;
-  				}
-  				if (options.weight !== undefined) {
-  						_this.godRaysMaterial.uniforms.weight.value = options.weight;
-  				}
-  				if (options.clampMax !== undefined) {
-  						_this.godRaysMaterial.uniforms.clampMax.value = options.clampMax;
-  				}
-
-  				_this.samples = options.samples;
-  				_this.intensity = options.intensity;
-
-  				/**
-       * The main scene.
-       *
-       * @property mainScene
-       * @type Scene
-       */
-
-  				_this.mainScene = scene !== undefined ? scene : new THREE.Scene();
-
-  				/**
-       * The main camera.
-       *
-       * @property mainCamera
-       * @type Camera
-       */
-
-  				_this.mainCamera = camera !== undefined ? camera : new THREE.PerspectiveCamera();
-
-  				return _this;
-  		}
-
-  		/**
-     * The strength of the preliminary blur phase.
-     *
-     * @property blurriness
-     * @type Number
-     * @default 0.1
+    /**
+     * 
+     * @param elem
+     * @param selectable
      */
+    makeSelectable: function(elem, selectable) {
 
-  		createClass(GodRaysPass, [{
-  				key: "render",
+      if (elem === undefined || elem.style === undefined) return;
 
+      elem.onselectstart = selectable ? function() {
+        return false;
+      } : function() {
+      };
 
-  				/**
-       * Renders the scene.
-       *
-       * The read buffer is assumed to contain the normally rendered scene.
-       * The god rays pass has four phases with a total of 8 render steps.
-       *
-       * Mask Phase:
-       *  The scene is rendered using a mask material.
-       *
-       * Preliminary Blur Phase:
-       *  The masked scene is blurred five consecutive times.
-       *
-       * God Rays Phase:
-       *  The blurred scene is blurred again, but this time along radial lines
-       *  towards the light source.
-       *
-       * Composite Phase:
-       *  The final result is added to the normal scene.
-       *
-       * @method render
-       * @param {WebGLRenderer} renderer - The renderer to use.
-       * @param {WebGLRenderTarget} readBuffer - The read buffer.
-       */
+      elem.style.MozUserSelect = selectable ? 'auto' : 'none';
+      elem.style.KhtmlUserSelect = selectable ? 'auto' : 'none';
+      elem.unselectable = selectable ? 'on' : 'off';
 
-  				value: function render(renderer, readBuffer) {
+    },
 
-  						var clearAlpha = void 0,
-  						    background = void 0;
-  						var state = renderer.state;
-
-  						// Compute the screen light position and translate the coordinates to [0, 1].
-  						this.screenPosition.copy(this.lightSource.position).project(this.mainCamera);
-  						this.screenPosition.x = THREE.Math.clamp((this.screenPosition.x + 1.0) * 0.5, 0.0, 1.0);
-  						this.screenPosition.y = THREE.Math.clamp((this.screenPosition.y + 1.0) * 0.5, 0.0, 1.0);
-
-  						// Render the masked scene.
-  						state.setDepthWrite(true);
-
-  						background = this.mainScene.background;
-  						CLEAR_COLOR.copy(renderer.getClearColor());
-  						clearAlpha = renderer.getClearAlpha();
-
-  						renderer.setClearColor(0x000000, 1);
-  						this.mainScene.overrideMaterial = this.maskMaterial;
-  						this.mainScene.background = null;
-
-  						renderer.render(this.mainScene, this.mainCamera, this.renderTargetMask, true);
-
-  						this.mainScene.background = background;
-  						this.mainScene.overrideMaterial = null;
-  						renderer.setClearColor(CLEAR_COLOR, clearAlpha);
-
-  						state.setDepthWrite(false);
-
-  						// Convolution phase (5 passes).
-  						this.quad.material = this.convolutionMaterial;
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetMask.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetX);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetX.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetY);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetY.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetX);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetX.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetY);
-
-  						this.convolutionMaterial.adjustKernel();
-  						this.convolutionMaterial.uniforms.tDiffuse.value = this.renderTargetY.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetX);
-
-  						// God rays pass.
-  						this.quad.material = this.godRaysMaterial;
-  						this.godRaysMaterial.uniforms.tDiffuse.value = this.renderTargetX.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetY);
-
-  						// Final pass - composite god rays onto colors.
-  						if (this.renderToScreen) {
-
-  								this.quad.material = this.combineMaterial;
-  								this.combineMaterial.uniforms.texture1.value = readBuffer.texture;
-  								this.combineMaterial.uniforms.texture2.value = this.renderTargetY.texture;
-
-  								renderer.render(this.scene, this.camera);
-  						} else {
-
-  								this.quad.material = this.copyMaterial;
-  								this.copyMaterial.uniforms.tDiffuse.value = this.renderTargetY.texture;
-
-  								renderer.render(this.scene, this.camera, readBuffer);
-  						}
-  				}
-
-  				/**
-       * Adjusts the format and size of the render targets.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       * @param {Boolean} alpha - Whether the renderer uses the alpha channel or not.
-       */
-
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer, alpha) {
-
-  						var size = renderer.getSize();
-  						this.setSize(size.width, size.height);
-
-  						if (!alpha) {
-
-  								this.renderTargetMask.texture.format = THREE.RGBFormat;
-  								this.renderTargetX.texture.format = THREE.RGBFormat;
-  								this.renderTargetY.texture.format = THREE.RGBFormat;
-  						}
-  				}
-
-  				/**
-       * Updates this pass with the renderer's size.
-       *
-       * @method setSize
-       * @param {Number} width - The width.
-       * @param {Number} height - The height.
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
-
-  						width = Math.floor(width * this.resolutionScale);
-  						height = Math.floor(height * this.resolutionScale);
-
-  						if (width <= 0) {
-  								width = 1;
-  						}
-  						if (height <= 0) {
-  								height = 1;
-  						}
-
-  						this.renderTargetMask.setSize(width, height);
-  						this.renderTargetX.setSize(width, height);
-  						this.renderTargetY.setSize(width, height);
-
-  						this.convolutionMaterial.setTexelSize(1.0 / width, 1.0 / height);
-  				}
-  		}, {
-  				key: "blurriness",
-  				get: function get() {
-  						return this.convolutionMaterial.scale;
-  				},
-  				set: function set(x) {
-
-  						if (typeof x === "number") {
-
-  								this.convolutionMaterial.scale = x;
-  						}
-  				}
-
-  				/**
-       * The overall intensity of the effect.
-       *
-       * @property intensity
-       * @type Number
-       * @default 1.0
-       */
-
-  		}, {
-  				key: "intensity",
-  				get: function get() {
-  						return this.combineMaterial.uniforms.opacity2.value;
-  				},
-  				set: function set(x) {
-
-  						if (typeof x === "number") {
-
-  								this.combineMaterial.uniforms.opacity2.value = x;
-  								this.copyMaterial.uniforms.opacity.value = x;
-  						}
-  				}
-
-  				/**
-       * The number of samples per pixel.
-       *
-       * This value must be carefully chosen. A higher value increases the GPU load
-       * directly and doesn't necessarily yield better results!
-       *
-       * @property samples
-       * @type Number
-       * @default 60
-       */
-
-  		}, {
-  				key: "samples",
-  				get: function get() {
-  						return Number.parseInt(this.godRaysMaterial.defines.NUM_SAMPLES_INT);
-  				},
-  				set: function set(x) {
-
-  						if (typeof x === "number" && x > 0) {
-
-  								x = Math.floor(x);
-
-  								this.godRaysMaterial.defines.NUM_SAMPLES_FLOAT = x.toFixed(1);
-  								this.godRaysMaterial.defines.NUM_SAMPLES_INT = x.toFixed(0);
-  								this.godRaysMaterial.needsUpdate = true;
-  						}
-  				}
-  		}]);
-  		return GodRaysPass;
-  }(Pass);
-
-  /**
-   * A mask pass.
-   *
-   * @class MaskPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Scene} scene - The scene to render.
-   * @param {Camera} camera - The camera to use to render the scene.
-   */
-
-  var MaskPass = function (_Pass) {
-  		inherits(MaskPass, _Pass);
-
-  		function MaskPass(scene, camera) {
-  				classCallCheck(this, MaskPass);
-
-  				/**
-       * Inverse flag.
-       *
-       * @property inverse
-       * @type Boolean
-       * @default false
-       */
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(MaskPass).call(this, scene, camera, null));
-
-  				_this.inverse = false;
-
-  				/**
-       * Clear flag.
-       *
-       * @property clear
-       * @type Boolean
-       * @default true
-       */
-
-  				_this.clear = true;
-
-  				return _this;
-  		}
-
-  		/**
-     * Renders the scene as a mask by only setting the stencil bits.
-     * The buffers will both be cleared first.
+    /**
      *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
-     * @param {WebGLRenderTarget} writeBuffer - The write buffer.
+     * @param elem
+     * @param horizontal
+     * @param vertical
      */
+    makeFullscreen: function(elem, horizontal, vertical) {
 
-  		createClass(MaskPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer) {
+      if (common.isUndefined(horizontal)) horizontal = true;
+      if (common.isUndefined(vertical)) vertical = true;
 
-  						var ctx = renderer.context;
-  						var state = renderer.state;
+      elem.style.position = 'absolute';
 
-  						var writeValue = this.inverse ? 0 : 1;
-  						var clearValue = 1 - writeValue;
+      if (horizontal) {
+        elem.style.left = 0;
+        elem.style.right = 0;
+      }
+      if (vertical) {
+        elem.style.top = 0;
+        elem.style.bottom = 0;
+      }
 
-  						// Don't update color or depth.
-  						state.setColorWrite(false);
-  						state.setDepthWrite(false);
+    },
 
-  						state.setStencilTest(true);
-  						state.setStencilOp(ctx.REPLACE, ctx.REPLACE, ctx.REPLACE);
-  						state.setStencilFunc(ctx.ALWAYS, writeValue, 0xffffffff);
-  						state.clearStencil(clearValue);
-
-  						// Draw the mask into both buffers.
-  						renderer.render(this.scene, this.camera, readBuffer, this.clear);
-  						renderer.render(this.scene, this.camera, writeBuffer, this.clear);
-
-  						// Re-enable update of color and depth.
-  						state.setColorWrite(true);
-  						state.setDepthWrite(true);
-
-  						// Only render where stencil is set to 1.
-  						state.setStencilFunc(ctx.EQUAL, 1, 0xffffffff); // draw if == 1
-  						state.setStencilOp(ctx.KEEP, ctx.KEEP, ctx.KEEP);
-  				}
-  		}]);
-  		return MaskPass;
-  }(Pass);
-
-  /**
-   * Used for saving the original clear color during rendering.
-   *
-   * @property CLEAR_COLOR
-   * @type Color
-   * @private
-   * @static
-   */
-
-  var CLEAR_COLOR$1 = new THREE.Color();
-
-  /**
-   * A pass that renders a given scene directly on screen or into the read buffer
-   * for further processing.
-   *
-   * @class RenderPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Scene} scene - The scene to render.
-   * @param {Camera} camera - The camera to use to render the scene.
-   * @param {Object} [options] - Additional options.
-   * @param {Material} [options.overrideMaterial] - An override material for the scene.
-   * @param {Color} [options.clearColor] - An override clear color.
-   * @param {Number} [options.clearAlpha] - An override clear alpha.
-   */
-
-  var RenderPass = function (_Pass) {
-  		inherits(RenderPass, _Pass);
-
-  		function RenderPass(scene, camera, options) {
-  				classCallCheck(this, RenderPass);
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(RenderPass).call(this, scene, camera, null));
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-
-  				/**
-       * Override material.
-       *
-       * @property overrideMaterial
-       * @type Material
-       */
-
-  				_this.overrideMaterial = options.overrideMaterial !== undefined ? options.overrideMaterial : null;
-
-  				/**
-       * Clear color.
-       *
-       * @property clearColor
-       * @type Color
-       */
-
-  				_this.clearColor = options.clearColor !== undefined ? options.clearColor : null;
-
-  				/**
-       * Clear alpha.
-       *
-       * @property clearAlpha
-       * @type Number
-       */
-
-  				_this.clearAlpha = options.clearAlpha === undefined ? 1.0 : THREE.Math.clamp(options.clearAlpha, 0.0, 1.0);
-
-  				/**
-       * Clear flag.
-       *
-       * @property clear
-       * @type Boolean
-       * @default true
-       */
-
-  				_this.clear = true;
-
-  				return _this;
-  		}
-
-  		/**
-     * Renders the scene.
+    /**
      *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
+     * @param elem
+     * @param eventType
+     * @param params
      */
+    fakeEvent: function(elem, eventType, params, aux) {
+      params = params || {};
+      var className = EVENT_MAP_INV[eventType];
+      if (!className) {
+        throw new Error('Event type ' + eventType + ' not supported.');
+      }
+      var evt = document.createEvent(className);
+      switch (className) {
+        case 'MouseEvents':
+          var clientX = params.x || params.clientX || 0;
+          var clientY = params.y || params.clientY || 0;
+          evt.initMouseEvent(eventType, params.bubbles || false,
+              params.cancelable || true, window, params.clickCount || 1,
+              0, //screen X
+              0, //screen Y
+              clientX, //client X
+              clientY, //client Y
+              false, false, false, false, 0, null);
+          break;
+        case 'KeyboardEvents':
+          var init = evt.initKeyboardEvent || evt.initKeyEvent; // webkit || moz
+          common.defaults(params, {
+            cancelable: true,
+            ctrlKey: false,
+            altKey: false,
+            shiftKey: false,
+            metaKey: false,
+            keyCode: undefined,
+            charCode: undefined
+          });
+          init(eventType, params.bubbles || false,
+              params.cancelable, window,
+              params.ctrlKey, params.altKey,
+              params.shiftKey, params.metaKey,
+              params.keyCode, params.charCode);
+          break;
+        default:
+          evt.initEvent(eventType, params.bubbles || false,
+              params.cancelable || true);
+          break;
+      }
+      common.defaults(evt, aux);
+      elem.dispatchEvent(evt);
+    },
 
-  		createClass(RenderPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer) {
+    /**
+     *
+     * @param elem
+     * @param event
+     * @param func
+     * @param bool
+     */
+    bind: function(elem, event, func, bool) {
+      bool = bool || false;
+      if (elem.addEventListener)
+        elem.addEventListener(event, func, bool);
+      else if (elem.attachEvent)
+        elem.attachEvent('on' + event, func);
+      return dom;
+    },
 
-  						var clearAlpha = void 0;
-  						var state = renderer.state;
+    /**
+     *
+     * @param elem
+     * @param event
+     * @param func
+     * @param bool
+     */
+    unbind: function(elem, event, func, bool) {
+      bool = bool || false;
+      if (elem.removeEventListener)
+        elem.removeEventListener(event, func, bool);
+      else if (elem.detachEvent)
+        elem.detachEvent('on' + event, func);
+      return dom;
+    },
 
-  						state.setDepthWrite(true);
+    /**
+     *
+     * @param elem
+     * @param className
+     */
+    addClass: function(elem, className) {
+      if (elem.className === undefined) {
+        elem.className = className;
+      } else if (elem.className !== className) {
+        var classes = elem.className.split(/ +/);
+        if (classes.indexOf(className) == -1) {
+          classes.push(className);
+          elem.className = classes.join(' ').replace(/^\s+/, '').replace(/\s+$/, '');
+        }
+      }
+      return dom;
+    },
 
-  						this.scene.overrideMaterial = this.overrideMaterial;
+    /**
+     *
+     * @param elem
+     * @param className
+     */
+    removeClass: function(elem, className) {
+      if (className) {
+        if (elem.className === undefined) {
+          // elem.className = className;
+        } else if (elem.className === className) {
+          elem.removeAttribute('class');
+        } else {
+          var classes = elem.className.split(/ +/);
+          var index = classes.indexOf(className);
+          if (index != -1) {
+            classes.splice(index, 1);
+            elem.className = classes.join(' ');
+          }
+        }
+      } else {
+        elem.className = undefined;
+      }
+      return dom;
+    },
 
-  						if (this.clearColor !== null) {
+    hasClass: function(elem, className) {
+      return new RegExp('(?:^|\\s+)' + className + '(?:\\s+|$)').test(elem.className) || false;
+    },
 
-  								CLEAR_COLOR$1.copy(renderer.getClearColor());
-  								clearAlpha = renderer.getClearAlpha();
-  								renderer.setClearColor(this.clearColor, this.clearAlpha);
-  						}
+    /**
+     *
+     * @param elem
+     */
+    getWidth: function(elem) {
 
-  						if (this.renderToScreen) {
+      var style = getComputedStyle(elem);
 
-  								renderer.render(this.scene, this.camera, null, this.clear);
-  						} else {
+      return cssValueToPixels(style['border-left-width']) +
+          cssValueToPixels(style['border-right-width']) +
+          cssValueToPixels(style['padding-left']) +
+          cssValueToPixels(style['padding-right']) +
+          cssValueToPixels(style['width']);
+    },
 
-  								renderer.render(this.scene, this.camera, readBuffer, this.clear);
-  						}
+    /**
+     *
+     * @param elem
+     */
+    getHeight: function(elem) {
 
-  						if (this.clearColor !== null) {
+      var style = getComputedStyle(elem);
 
-  								renderer.setClearColor(CLEAR_COLOR$1, clearAlpha);
-  						}
+      return cssValueToPixels(style['border-top-width']) +
+          cssValueToPixels(style['border-bottom-width']) +
+          cssValueToPixels(style['padding-top']) +
+          cssValueToPixels(style['padding-bottom']) +
+          cssValueToPixels(style['height']);
+    },
 
-  						this.scene.overrideMaterial = null;
+    /**
+     *
+     * @param elem
+     */
+    getOffset: function(elem) {
+      var offset = {left: 0, top:0};
+      if (elem.offsetParent) {
+        do {
+          offset.left += elem.offsetLeft;
+          offset.top += elem.offsetTop;
+        } while (elem = elem.offsetParent);
+      }
+      return offset;
+    },
 
-  						state.setDepthWrite(false);
-  				}
-  		}]);
-  		return RenderPass;
-  }(Pass);
+    // http://stackoverflow.com/posts/2684561/revisions
+    /**
+     * 
+     * @param elem
+     */
+    isActive: function(elem) {
+      return elem === document.activeElement && ( elem.type || elem.href );
+    }
+
+  };
+
+  return dom;
+
+})(dat.utils.common);
+
+
+dat.controllers.OptionController = (function (Controller, dom, common) {
 
   /**
-   * A pass that renders the result from a previous pass to another render target.
+   * @class Provides a select input to alter the property of an object, using a
+   * list of accepted values.
    *
-   * @class SavePass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Scene} renderTarget - The render target to use for saving the read buffer.
-   * @param {Boolean} [resize] - Whether the render target should adjust to the size of the read/write buffer.
+   * @extends dat.controllers.Controller
+   *
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
+   * @param {Object|string[]} options A map of labels to acceptable values, or
+   * a list of acceptable string values.
+   *
+   * @member dat.controllers
    */
+  var OptionController = function(object, property, options) {
 
-  var SavePass = function (_Pass) {
-  		inherits(SavePass, _Pass);
+    OptionController.superclass.call(this, object, property);
 
-  		function SavePass(renderTarget, resize) {
-  				classCallCheck(this, SavePass);
+    var _this = this;
 
-  				/**
-       * Copy shader material.
-       *
-       * @property material
-       * @type CopyMaterial
-       * @private
-       */
-
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(SavePass).call(this));
-
-  				_this.material = new CopyMaterial();
-
-  				_this.quad.material = _this.material;
-
-  				/**
-       * The render target.
-       *
-       * @property renderTarget
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTarget = renderTarget !== undefined ? renderTarget : null;
-
-  				/**
-       * Indicates whether the render target should be resized when the size of
-       * the composer's read/write buffer changes.
-       *
-       * @property resize
-       * @type Boolean
-       * @default true
-       */
-
-  				_this.resize = resize !== undefined ? resize : true;
-
-  				return _this;
-  		}
-
-  		/**
-     * Saves the read buffer.
-     *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
+    /**
+     * The drop down menu
+     * @ignore
      */
+    this.__select = document.createElement('select');
 
-  		createClass(SavePass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer) {
+    if (common.isArray(options)) {
+      var map = {};
+      common.each(options, function(element) {
+        map[element] = element;
+      });
+      options = map;
+    }
 
-  						this.material.uniforms.tDiffuse.value = readBuffer.texture;
-  						renderer.render(this.scene, this.camera, this.renderTarget, this.clear);
-  				}
+    common.each(options, function(value, key) {
 
-  				/**
-       * Updates this pass with the renderer's size.
-       *
-       * @method setSize
-       * @param {Number} width - The width.
-       * @param {Number} height - The height.
-       */
+      var opt = document.createElement('option');
+      opt.innerHTML = key;
+      opt.setAttribute('value', value);
+      _this.__select.appendChild(opt);
 
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
+    });
 
-  						if (this.resize && this.renderTarget !== null) {
+    // Acknowledge original value
+    this.updateDisplay();
 
-  								if (width <= 0) {
-  										width = 1;
-  								}
-  								if (height <= 0) {
-  										height = 1;
-  								}
+    dom.bind(this.__select, 'change', function() {
+      var desiredValue = this.options[this.selectedIndex].value;
+      _this.setValue(desiredValue);
+    });
 
-  								this.renderTarget.setSize(width, height);
-  						}
-  				}
-  		}]);
-  		return SavePass;
-  }(Pass);
+    this.domElement.appendChild(this.__select);
+
+  };
+
+  OptionController.superclass = Controller;
+
+  common.extend(
+
+      OptionController.prototype,
+      Controller.prototype,
+
+      {
+
+        setValue: function(v) {
+          var toReturn = OptionController.superclass.prototype.setValue.call(this, v);
+          if (this.__onFinishChange) {
+            this.__onFinishChange.call(this, this.getValue());
+          }
+          return toReturn;
+        },
+
+        updateDisplay: function() {
+          this.__select.value = this.getValue();
+          return OptionController.superclass.prototype.updateDisplay.call(this);
+        }
+
+      }
+
+  );
+
+  return OptionController;
+
+})(dat.controllers.Controller,
+dat.dom.dom,
+dat.utils.common);
+
+
+dat.controllers.NumberController = (function (Controller, common) {
 
   /**
-   * Subpixel Morphological Antialiasing (SMAA) v2.8.
+   * @class Represents a given property of an object that is a number.
    *
-   * Preset: SMAA 1x Medium (with color edge detection).
-   *  https://github.com/iryoku/smaa/releases/tag/v2.8
+   * @extends dat.controllers.Controller
    *
-   * @class SMAAPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Image} Image - This pass requires an Image class to create internal textures. Provide window.Image in a browser environment.
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
+   * @param {Object} [params] Optional parameters
+   * @param {Number} [params.min] Minimum allowed value
+   * @param {Number} [params.max] Maximum allowed value
+   * @param {Number} [params.step] Increment by which to change value
+   *
+   * @member dat.controllers
    */
+  var NumberController = function(object, property, params) {
 
-  var SMAAPass = function (_Pass) {
-  		inherits(SMAAPass, _Pass);
+    NumberController.superclass.call(this, object, property);
 
-  		function SMAAPass(Image) {
-  				classCallCheck(this, SMAAPass);
+    params = params || {};
 
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(SMAAPass).call(this));
+    this.__min = params.min;
+    this.__max = params.max;
+    this.__step = params.step;
 
-  				_this.needsSwap = true;
+    if (common.isUndefined(this.__step)) {
 
-  				/**
-       * A render target for the color edge detection.
-       *
-       * @property renderTargetColorEdges
-       * @type WebGLRenderTarget
-       * @private
-       */
+      if (this.initialValue == 0) {
+        this.__impliedStep = 1; // What are we, psychics?
+      } else {
+        // Hey Doug, check this out.
+        this.__impliedStep = Math.pow(10, Math.floor(Math.log(this.initialValue)/Math.LN10))/10;
+      }
 
-  				_this.renderTargetColorEdges = new THREE.WebGLRenderTarget(1, 1, {
-  						minFilter: THREE.LinearFilter,
-  						format: THREE.RGBFormat,
-  						generateMipmaps: false,
-  						stencilBuffer: false,
-  						depthBuffer: false
-  				});
+    } else {
 
-  				/**
-       * A render target for the SMAA weights.
-       *
-       * @property renderTargetWeights
-       * @type Material
-       * @private
-       */
+      this.__impliedStep = this.__step;
 
-  				_this.renderTargetWeights = _this.renderTargetColorEdges.clone();
+    }
 
-  				_this.renderTargetWeights.texture.format = THREE.RGBAFormat;
+    this.__precision = numDecimals(this.__impliedStep);
 
-  				/**
-       * SMAA color edge detection shader material.
-       *
-       * @property colorEdgesMaterial
-       * @type SMAAColorEdgesMaterial
-       * @private
-       */
 
-  				_this.colorEdgesMaterial = new SMAAColorEdgesMaterial();
+  };
 
-  				/**
-       * SMAA weights shader material.
-       *
-       * @property weightsMaterial
-       * @type SMAAWeightsMaterial
-       * @private
-       */
+  NumberController.superclass = Controller;
 
-  				_this.weightsMaterial = new SMAAWeightsMaterial();
+  common.extend(
 
-  				var areaImage = new Image();
-  				areaImage.src = _this.weightsMaterial.areaImage;
+      NumberController.prototype,
+      Controller.prototype,
 
-  				var areaTexture = new THREE.Texture();
-  				areaTexture.image = areaImage;
-  				areaTexture.minFilter = THREE.LinearFilter;
-  				areaTexture.format = THREE.RGBFormat;
-  				areaTexture.generateMipmaps = false;
-  				areaTexture.needsUpdate = true;
-  				areaTexture.flipY = false;
+      /** @lends dat.controllers.NumberController.prototype */
+      {
 
-  				var searchImage = new Image();
-  				searchImage.src = _this.weightsMaterial.searchImage;
+        setValue: function(v) {
 
-  				var searchTexture = new THREE.Texture();
-  				searchTexture.image = searchImage;
-  				searchTexture.magFilter = THREE.NearestFilter;
-  				searchTexture.minFilter = THREE.NearestFilter;
-  				searchTexture.generateMipmaps = false;
-  				searchTexture.needsUpdate = true;
-  				searchTexture.flipY = false;
+          if (this.__min !== undefined && v < this.__min) {
+            v = this.__min;
+          } else if (this.__max !== undefined && v > this.__max) {
+            v = this.__max;
+          }
 
-  				_this.weightsMaterial.uniforms.tDiffuse.value = _this.renderTargetColorEdges.texture;
-  				_this.weightsMaterial.uniforms.tArea.value = areaTexture;
-  				_this.weightsMaterial.uniforms.tSearch.value = searchTexture;
+          if (this.__step !== undefined && v % this.__step != 0) {
+            v = Math.round(v / this.__step) * this.__step;
+          }
 
-  				/**
-       * SMAA blend shader material.
-       *
-       * @property blendMaterial
-       * @type SMAABlendMaterial
-       * @private
-       */
+          return NumberController.superclass.prototype.setValue.call(this, v);
 
-  				_this.blendMaterial = new SMAABlendMaterial();
+        },
 
-  				_this.blendMaterial.uniforms.tWeights.value = _this.renderTargetWeights.texture;
+        /**
+         * Specify a minimum value for <code>object[property]</code>.
+         *
+         * @param {Number} minValue The minimum value for
+         * <code>object[property]</code>
+         * @returns {dat.controllers.NumberController} this
+         */
+        min: function(v) {
+          this.__min = v;
+          return this;
+        },
 
-  				_this.quad.material = _this.blendMaterial;
+        /**
+         * Specify a maximum value for <code>object[property]</code>.
+         *
+         * @param {Number} maxValue The maximum value for
+         * <code>object[property]</code>
+         * @returns {dat.controllers.NumberController} this
+         */
+        max: function(v) {
+          this.__max = v;
+          return this;
+        },
 
-  				return _this;
-  		}
+        /**
+         * Specify a step value that dat.controllers.NumberController
+         * increments by.
+         *
+         * @param {Number} stepValue The step value for
+         * dat.controllers.NumberController
+         * @default if minimum and maximum specified increment is 1% of the
+         * difference otherwise stepValue is 1
+         * @returns {dat.controllers.NumberController} this
+         */
+        step: function(v) {
+          this.__step = v;
+          return this;
+        }
 
-  		/**
-     * Antialiases the scene.
-     *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer to use.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
-     * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-     */
+      }
 
-  		createClass(SMAAPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer) {
+  );
 
-  						// Detect color edges.
-  						this.quad.material = this.colorEdgesMaterial;
-  						this.colorEdgesMaterial.uniforms.tDiffuse.value = readBuffer.texture;
-  						renderer.render(this.scene, this.camera, this.renderTargetColorEdges, true);
+  function numDecimals(x) {
+    x = x.toString();
+    if (x.indexOf('.') > -1) {
+      return x.length - x.indexOf('.') - 1;
+    } else {
+      return 0;
+    }
+  }
 
-  						// Compute edge weights.
-  						this.quad.material = this.weightsMaterial;
-  						renderer.render(this.scene, this.camera, this.renderTargetWeights, false);
+  return NumberController;
 
-  						// Apply the antialiasing filter to the colors.
-  						this.quad.material = this.blendMaterial;
-  						this.blendMaterial.uniforms.tDiffuse.value = readBuffer.texture;
+})(dat.controllers.Controller,
+dat.utils.common);
 
-  						if (this.renderToScreen) {
 
-  								renderer.render(this.scene, this.camera);
-  						} else {
-
-  								renderer.render(this.scene, this.camera, writeBuffer, false);
-  						}
-  				}
-
-  				/**
-       * Adjusts the format and size of the render targets.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       */
-
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer) {
-
-  						var size = renderer.getSize();
-  						this.setSize(size.width, size.height);
-  				}
-
-  				/**
-       * Updates this pass with the renderer's size.
-       *
-       * @method setSize
-       * @param {Number} width - The width.
-       * @param {Number} height - The height.
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
-
-  						this.renderTargetColorEdges.setSize(width, height);
-  						this.renderTargetWeights.setSize(width, height);
-
-  						this.colorEdgesMaterial.uniforms.texelSize.value.copy(this.weightsMaterial.uniforms.texelSize.value.copy(this.blendMaterial.uniforms.texelSize.value.set(1.0 / width, 1.0 / height)));
-  				}
-  		}]);
-  		return SMAAPass;
-  }(Pass);
+dat.controllers.NumberControllerBox = (function (NumberController, dom, common) {
 
   /**
-   * A shader pass.
+   * @class Represents a given property of an object that is a number and
+   * provides an input element with which to manipulate it.
    *
-   * Used to render any shader material as a 2D filter.
+   * @extends dat.controllers.Controller
+   * @extends dat.controllers.NumberController
    *
-   * @class ShaderPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {ShaderMaterial} material - The shader material to use.
-   * @param {String} [textureID="tDiffuse"] - The texture uniform identifier.
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
+   * @param {Object} [params] Optional parameters
+   * @param {Number} [params.min] Minimum allowed value
+   * @param {Number} [params.max] Maximum allowed value
+   * @param {Number} [params.step] Increment by which to change value
+   *
+   * @member dat.controllers
    */
+  var NumberControllerBox = function(object, property, params) {
 
-  var ShaderPass = function (_Pass) {
-  		inherits(ShaderPass, _Pass);
+    this.__truncationSuspended = false;
 
-  		function ShaderPass(material, textureID) {
-  				classCallCheck(this, ShaderPass);
+    NumberControllerBox.superclass.call(this, object, property, params);
 
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(ShaderPass).call(this));
+    var _this = this;
 
-  				_this.needsSwap = true;
-
-  				/**
-       * The name of the color sampler uniform of the given material.
-       *
-       * @property textureID
-       * @type String
-       * @default "tDiffuse"
-       */
-
-  				_this.textureID = textureID !== undefined ? textureID : "tDiffuse";
-
-  				/**
-       * The shader material to use for rendering.
-       *
-       * @property material
-       * @type ShaderMaterial
-       */
-
-  				_this.material = material !== undefined ? material : null;
-
-  				_this.quad.material = _this.material;
-
-  				return _this;
-  		}
-
-  		/**
-     * Renders the effect.
-     *
-     * @method render
-     * @param {WebGLRenderer} renderer - The renderer.
-     * @param {WebGLRenderTarget} readBuffer - The read buffer.
-     * @param {WebGLRenderTarget} writeBuffer - The write buffer.
+    /**
+     * {Number} Previous mouse y position
+     * @ignore
      */
+    var prev_y;
 
-  		createClass(ShaderPass, [{
-  				key: "render",
-  				value: function render(renderer, readBuffer, writeBuffer) {
+    this.__input = document.createElement('input');
+    this.__input.setAttribute('type', 'text');
 
-  						if (this.material.uniforms[this.textureID] !== undefined) {
+    // Makes it so manually specified values are not truncated.
 
-  								this.material.uniforms[this.textureID].value = readBuffer.texture;
-  						}
+    dom.bind(this.__input, 'change', onChange);
+    dom.bind(this.__input, 'blur', onBlur);
+    dom.bind(this.__input, 'mousedown', onMouseDown);
+    dom.bind(this.__input, 'keydown', function(e) {
 
-  						if (this.renderToScreen) {
+      // When pressing entire, you can be as precise as you want.
+      if (e.keyCode === 13) {
+        _this.__truncationSuspended = true;
+        this.blur();
+        _this.__truncationSuspended = false;
+      }
 
-  								renderer.render(this.scene, this.camera);
-  						} else {
+    });
 
-  								renderer.render(this.scene, this.camera, writeBuffer, this.clear);
-  						}
-  				}
-  		}]);
-  		return ShaderPass;
-  }(Pass);
+    function onChange() {
+      var attempted = parseFloat(_this.__input.value);
+      if (!common.isNaN(attempted)) _this.setValue(attempted);
+    }
+
+    function onBlur() {
+      onChange();
+      if (_this.__onFinishChange) {
+        _this.__onFinishChange.call(_this, _this.getValue());
+      }
+    }
+
+    function onMouseDown(e) {
+      dom.bind(window, 'mousemove', onMouseDrag);
+      dom.bind(window, 'mouseup', onMouseUp);
+      prev_y = e.clientY;
+    }
+
+    function onMouseDrag(e) {
+
+      var diff = prev_y - e.clientY;
+      _this.setValue(_this.getValue() + diff * _this.__impliedStep);
+
+      prev_y = e.clientY;
+
+    }
+
+    function onMouseUp() {
+      dom.unbind(window, 'mousemove', onMouseDrag);
+      dom.unbind(window, 'mouseup', onMouseUp);
+    }
+
+    this.updateDisplay();
+
+    this.domElement.appendChild(this.__input);
+
+  };
+
+  NumberControllerBox.superclass = NumberController;
+
+  common.extend(
+
+      NumberControllerBox.prototype,
+      NumberController.prototype,
+
+      {
+
+        updateDisplay: function() {
+
+          this.__input.value = this.__truncationSuspended ? this.getValue() : roundToDecimal(this.getValue(), this.__precision);
+          return NumberControllerBox.superclass.prototype.updateDisplay.call(this);
+        }
+
+      }
+
+  );
+
+  function roundToDecimal(value, decimals) {
+    var tenTo = Math.pow(10, decimals);
+    return Math.round(value * tenTo) / tenTo;
+  }
+
+  return NumberControllerBox;
+
+})(dat.controllers.NumberController,
+dat.dom.dom,
+dat.utils.common);
+
+
+dat.controllers.NumberControllerSlider = (function (NumberController, dom, css, common, styleSheet) {
 
   /**
-   * A tone mapping pass that supports adaptive luminosity.
+   * @class Represents a given property of an object that is a number, contains
+   * a minimum and maximum, and provides a slider element with which to
+   * manipulate it. It should be noted that the slider element is made up of
+   * <code>&lt;div&gt;</code> tags, <strong>not</strong> the html5
+   * <code>&lt;slider&gt;</code> element.
    *
-   * If adaptivity is enabled, this pass generates a texture that represents the
-   * luminosity of the current scene and adjusts it over time to simulate the
-   * optic nerve responding to the amount of light it is receiving.
+   * @extends dat.controllers.Controller
+   * @extends dat.controllers.NumberController
+   * 
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
+   * @param {Number} minValue Minimum allowed value
+   * @param {Number} maxValue Maximum allowed value
+   * @param {Number} stepValue Increment by which to change value
    *
-   * Reference:
-   *  GDC2007 - Wolfgang Engel, Post-Processing Pipeline
-   *  http://www.graphics.cornell.edu/~jaf/publications/sig02_paper.pdf
-   *
-   * @class ToneMappingPass
-   * @submodule passes
-   * @extends Pass
-   * @constructor
-   * @param {Object} [options] - The options.
-   * @param {Boolean} [options.adaptive=true] - Whether the tone mapping should use an adaptive luminance map.
-   * @param {Number} [options.resolution=256] - The render texture resolution.
-   * @param {Number} [options.distinction=1.0] - A luminance distinction factor.
+   * @member dat.controllers
    */
+  var NumberControllerSlider = function(object, property, min, max, step) {
 
-  var ToneMappingPass = function (_Pass) {
-  		inherits(ToneMappingPass, _Pass);
+    NumberControllerSlider.superclass.call(this, object, property, { min: min, max: max, step: step });
 
-  		function ToneMappingPass(options) {
-  				classCallCheck(this, ToneMappingPass);
+    var _this = this;
 
-  				var _this = possibleConstructorReturn(this, Object.getPrototypeOf(ToneMappingPass).call(this));
-
-  				_this.needsSwap = true;
-
-  				if (options === undefined) {
-  						options = {};
-  				}
-
-  				/**
-       * Render target for the current limonosity.
-       *
-       * @property renderTargetLuminosity
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetLuminosity = new THREE.WebGLRenderTarget(1, 1, {
-  						minFilter: THREE.LinearMipMapLinearFilter,
-  						magFilter: THREE.LinearFilter,
-  						format: THREE.RGBFormat, // Change to RED format in WebGL 2.0! Don't need colours.
-  						stencilBuffer: false,
-  						depthBuffer: false
-  				});
-
-  				/**
-       * Adapted luminance render target.
-       *
-       * @property renderTargetLuminosity
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetAdapted = _this.renderTargetLuminosity.clone();
-
-  				_this.renderTargetAdapted.texture.generateMipmaps = false;
-  				_this.renderTargetAdapted.texture.minFilter = THREE.LinearFilter;
-
-  				/**
-       * Render target that holds a copy of the adapted limonosity.
-       *
-       * @property renderTargetX
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				_this.renderTargetPrevious = _this.renderTargetAdapted.clone();
-
-  				/**
-       * Copy shader material used for saving the luminance map.
-       *
-       * @property copyMaterial
-       * @type CopyMaterial
-       * @private
-       */
-
-  				_this.copyMaterial = new CopyMaterial();
-
-  				/**
-       * Luminosity shader material.
-       *
-       * @property luminosityMaterial
-       * @type LuminosityMaterial
-       * @private
-       */
-
-  				_this.luminosityMaterial = new LuminosityMaterial();
-
-  				_this.luminosityMaterial.uniforms.distinction.value = options.distinction === undefined ? 1.0 : options.distinction;
-
-  				/**
-       * Adaptive luminance shader material.
-       *
-       * @property adaptiveLuminosityMaterial
-       * @type AdaptiveLuminosityMaterial
-       * @private
-       */
-
-  				_this.adaptiveLuminosityMaterial = new AdaptiveLuminosityMaterial();
-
-  				_this.resolution = options.resolution === undefined ? 256 : options.resolution;
-
-  				/**
-       * Tone mapping shader material.
-       *
-       * @property toneMappingMaterial
-       * @type ToneMappingMaterial
-       * @private
-       */
-
-  				_this.toneMappingMaterial = new ToneMappingMaterial();
-
-  				_this.adaptive = options.adaptive === undefined ? true : options.adaptive;
-
-  				return _this;
-  		}
-
-  		/**
-     * The resolution of the render targets. Must be a power of two for mipmapping.
-     *
-     * @property resolution
-     * @type Number
-     * @default 256
-     */
-
-  		createClass(ToneMappingPass, [{
-  				key: "render",
+    this.__background = document.createElement('div');
+    this.__foreground = document.createElement('div');
+    
 
 
-  				/**
-       * Renders the effect.
-       *
-       * @method render
-       * @param {WebGLRenderer} renderer - The renderer to use.
-       * @param {WebGLRenderTarget} readBuffer - The read buffer.
-       * @param {WebGLRenderTarget} writeBuffer - The write buffer.
-       * @param {Number} delta - The render delta time.
-       */
+    dom.bind(this.__background, 'mousedown', onMouseDown);
+    
+    dom.addClass(this.__background, 'slider');
+    dom.addClass(this.__foreground, 'slider-fg');
 
-  				value: function render(renderer, readBuffer, writeBuffer, delta) {
+    function onMouseDown(e) {
 
-  						var state = renderer.state;
+      dom.bind(window, 'mousemove', onMouseDrag);
+      dom.bind(window, 'mouseup', onMouseUp);
 
-  						if (this.adaptive) {
+      onMouseDrag(e);
+    }
 
-  								// Render the luminance of the current scene into a render target with mipmapping enabled.
-  								this.quad.material = this.luminosityMaterial;
-  								this.luminosityMaterial.uniforms.tDiffuse.value = readBuffer.texture;
-  								state.setDepthWrite(true);
-  								renderer.render(this.scene, this.camera, this.renderTargetLuminosity);
-  								state.setDepthWrite(false);
+    function onMouseDrag(e) {
 
-  								// Use the new luminance values, the previous luminance and the frame delta to adapt the luminance over time.
-  								this.quad.material = this.adaptiveLuminosityMaterial;
-  								this.adaptiveLuminosityMaterial.uniforms.delta.value = delta;
-  								this.adaptiveLuminosityMaterial.uniforms.tPreviousLum.value = this.renderTargetPrevious.texture;
-  								this.adaptiveLuminosityMaterial.uniforms.tCurrentLum.value = this.renderTargetLuminosity.texture;
-  								renderer.render(this.scene, this.camera, this.renderTargetAdapted);
+      e.preventDefault();
 
-  								// Copy the new adapted luminance value so that it can be used by the next frame.
-  								this.quad.material = this.copyMaterial;
-  								this.copyMaterial.uniforms.tDiffuse.value = this.renderTargetAdapted.texture;
-  								renderer.render(this.scene, this.camera, this.renderTargetPrevious);
-  						}
+      var offset = dom.getOffset(_this.__background);
+      var width = dom.getWidth(_this.__background);
+      
+      _this.setValue(
+        map(e.clientX, offset.left, offset.left + width, _this.__min, _this.__max)
+      );
 
-  						// Apply the tone mapping to the colours.
-  						this.quad.material = this.toneMappingMaterial;
-  						this.toneMappingMaterial.uniforms.tDiffuse.value = readBuffer.texture;
+      return false;
 
-  						if (this.renderToScreen) {
+    }
 
-  								renderer.render(this.scene, this.camera);
-  						} else {
+    function onMouseUp() {
+      dom.unbind(window, 'mousemove', onMouseDrag);
+      dom.unbind(window, 'mouseup', onMouseUp);
+      if (_this.__onFinishChange) {
+        _this.__onFinishChange.call(_this, _this.getValue());
+      }
+    }
 
-  								renderer.render(this.scene, this.camera, writeBuffer, false);
-  						}
-  				}
+    this.updateDisplay();
 
-  				/**
-       * Renders something into the previous luminosity texture.
-       *
-       * @method initialise
-       * @param {WebGLRenderer} renderer - The renderer.
-       */
+    this.__background.appendChild(this.__foreground);
+    this.domElement.appendChild(this.__background);
 
-  		}, {
-  				key: "initialise",
-  				value: function initialise(renderer) {
+  };
 
-  						this.quad.material = new THREE.MeshBasicMaterial({ color: 0x7fffff });
-  						renderer.render(this.scene, this.camera, this.renderTargetPrevious);
-  						this.quad.material.dispose();
-  				}
-  		}, {
-  				key: "resolution",
-  				get: function get() {
-  						return this.renderTargetLuminosity.width;
-  				},
-  				set: function set(x) {
-
-  						if (typeof x === "number" && x > 0) {
-
-  								this.renderTargetLuminosity.setSize(x, x);
-  								this.renderTargetPrevious.setSize(x, x); // Hm..
-  								this.renderTargetAdapted.setSize(x, x);
-
-  								this.adaptiveLuminosityMaterial.defines.MIP_LEVEL_1X1 = (Math.round(Math.log(x)) / Math.log(2)).toFixed(1);
-  								this.adaptiveLuminosityMaterial.needsUpdate = true;
-  						}
-  				}
-
-  				/**
-       * Whether this pass uses adaptive luminosity.
-       *
-       * @property adaptive
-       * @type Boolean
-       */
-
-  		}, {
-  				key: "adaptive",
-  				get: function get() {
-  						return this.toneMappingMaterial.defines.ADAPTED_LUMINANCE !== undefined;
-  				},
-  				set: function set(x) {
-
-  						if (x) {
-
-  								this.toneMappingMaterial.defines.ADAPTED_LUMINANCE = "1";
-  								this.toneMappingMaterial.uniforms.luminanceMap.value = this.renderTargetAdapted.texture;
-  						} else {
-
-  								delete this.toneMappingMaterial.defines.ADAPTED_LUMINANCE;
-  								this.toneMappingMaterial.uniforms.luminanceMap.value = null;
-  						}
-
-  						this.toneMappingMaterial.needsUpdate = true;
-  				}
-  		}]);
-  		return ToneMappingPass;
-  }(Pass);
+  NumberControllerSlider.superclass = NumberController;
 
   /**
-   * The EffectComposer may be used in place of a normal WebGLRenderer.
+   * Injects default stylesheet for slider elements.
+   */
+  NumberControllerSlider.useDefaultStyles = function() {
+    css.inject(styleSheet);
+  };
+
+  common.extend(
+
+      NumberControllerSlider.prototype,
+      NumberController.prototype,
+
+      {
+
+        updateDisplay: function() {
+          var pct = (this.getValue() - this.__min)/(this.__max - this.__min);
+          this.__foreground.style.width = pct*100+'%';
+          return NumberControllerSlider.superclass.prototype.updateDisplay.call(this);
+        }
+
+      }
+
+
+
+  );
+
+  function map(v, i1, i2, o1, o2) {
+    return o1 + (o2 - o1) * ((v - i1) / (i2 - i1));
+  }
+
+  return NumberControllerSlider;
+  
+})(dat.controllers.NumberController,
+dat.dom.dom,
+dat.utils.css,
+dat.utils.common,
+".slider {\n  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);\n  height: 1em;\n  border-radius: 1em;\n  background-color: #eee;\n  padding: 0 0.5em;\n  overflow: hidden;\n}\n\n.slider-fg {\n  padding: 1px 0 2px 0;\n  background-color: #aaa;\n  height: 1em;\n  margin-left: -0.5em;\n  padding-right: 0.5em;\n  border-radius: 1em 0 0 1em;\n}\n\n.slider-fg:after {\n  display: inline-block;\n  border-radius: 1em;\n  background-color: #fff;\n  border:  1px solid #aaa;\n  content: '';\n  float: right;\n  margin-right: -1em;\n  margin-top: -1px;\n  height: 0.9em;\n  width: 0.9em;\n}");
+
+
+dat.controllers.FunctionController = (function (Controller, dom, common) {
+
+  /**
+   * @class Provides a GUI interface to fire a specified method, a property of an object.
    *
-   * It will disable the auto clear behaviour of the provided renderer to prevent
-   * unnecessary clear operations. The depth buffer will also be disabled for
-   * writing. Passes that rely on the depth test must explicitly enable it.
+   * @extends dat.controllers.Controller
    *
-   * You may want to use a {{#crossLink "RenderPass"}}{{/crossLink}} as your first
-   * pass to automatically clear the screen and render the scene to a texture for
-   * further processing.
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
    *
-   * @class EffectComposer
-   * @module postprocessing
-   * @constructor
-   * @param {WebGLRenderer} [renderer] - The renderer that should be used in the passes.
-   * @param {Boolean} [depthTexture=false] - Set to true, if one of your passes relies on the depth of the main scene.
-   * @param {Boolean} [stencilBuffer=false] - Whether the main render targets should have a stencil buffer.
+   * @member dat.controllers
+   */
+  var FunctionController = function(object, property, text) {
+
+    FunctionController.superclass.call(this, object, property);
+
+    var _this = this;
+
+    this.__button = document.createElement('div');
+    this.__button.innerHTML = text === undefined ? 'Fire' : text;
+    dom.bind(this.__button, 'click', function(e) {
+      e.preventDefault();
+      _this.fire();
+      return false;
+    });
+
+    dom.addClass(this.__button, 'button');
+
+    this.domElement.appendChild(this.__button);
+
+
+  };
+
+  FunctionController.superclass = Controller;
+
+  common.extend(
+
+      FunctionController.prototype,
+      Controller.prototype,
+      {
+        
+        fire: function() {
+          if (this.__onChange) {
+            this.__onChange.call(this);
+          }
+          if (this.__onFinishChange) {
+            this.__onFinishChange.call(this, this.getValue());
+          }
+          this.getValue().call(this.object);
+        }
+      }
+
+  );
+
+  return FunctionController;
+
+})(dat.controllers.Controller,
+dat.dom.dom,
+dat.utils.common);
+
+
+dat.controllers.BooleanController = (function (Controller, dom, common) {
+
+  /**
+   * @class Provides a checkbox input to alter the boolean property of an object.
+   * @extends dat.controllers.Controller
+   *
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
+   *
+   * @member dat.controllers
+   */
+  var BooleanController = function(object, property) {
+
+    BooleanController.superclass.call(this, object, property);
+
+    var _this = this;
+    this.__prev = this.getValue();
+
+    this.__checkbox = document.createElement('input');
+    this.__checkbox.setAttribute('type', 'checkbox');
+
+
+    dom.bind(this.__checkbox, 'change', onChange, false);
+
+    this.domElement.appendChild(this.__checkbox);
+
+    // Match original value
+    this.updateDisplay();
+
+    function onChange() {
+      _this.setValue(!_this.__prev);
+    }
+
+  };
+
+  BooleanController.superclass = Controller;
+
+  common.extend(
+
+      BooleanController.prototype,
+      Controller.prototype,
+
+      {
+
+        setValue: function(v) {
+          var toReturn = BooleanController.superclass.prototype.setValue.call(this, v);
+          if (this.__onFinishChange) {
+            this.__onFinishChange.call(this, this.getValue());
+          }
+          this.__prev = this.getValue();
+          return toReturn;
+        },
+
+        updateDisplay: function() {
+          
+          if (this.getValue() === true) {
+            this.__checkbox.setAttribute('checked', 'checked');
+            this.__checkbox.checked = true;    
+          } else {
+              this.__checkbox.checked = false;
+          }
+
+          return BooleanController.superclass.prototype.updateDisplay.call(this);
+
+        }
+
+
+      }
+
+  );
+
+  return BooleanController;
+
+})(dat.controllers.Controller,
+dat.dom.dom,
+dat.utils.common);
+
+
+dat.color.toString = (function (common) {
+
+  return function(color) {
+
+    if (color.a == 1 || common.isUndefined(color.a)) {
+
+      var s = color.hex.toString(16);
+      while (s.length < 6) {
+        s = '0' + s;
+      }
+
+      return '#' + s;
+
+    } else {
+
+      return 'rgba(' + Math.round(color.r) + ',' + Math.round(color.g) + ',' + Math.round(color.b) + ',' + color.a + ')';
+
+    }
+
+  }
+
+})(dat.utils.common);
+
+
+dat.color.interpret = (function (toString, common) {
+
+  var result, toReturn;
+
+  var interpret = function() {
+
+    toReturn = false;
+
+    var original = arguments.length > 1 ? common.toArray(arguments) : arguments[0];
+
+    common.each(INTERPRETATIONS, function(family) {
+
+      if (family.litmus(original)) {
+
+        common.each(family.conversions, function(conversion, conversionName) {
+
+          result = conversion.read(original);
+
+          if (toReturn === false && result !== false) {
+            toReturn = result;
+            result.conversionName = conversionName;
+            result.conversion = conversion;
+            return common.BREAK;
+
+          }
+
+        });
+
+        return common.BREAK;
+
+      }
+
+    });
+
+    return toReturn;
+
+  };
+
+  var INTERPRETATIONS = [
+
+    // Strings
+    {
+
+      litmus: common.isString,
+
+      conversions: {
+
+        THREE_CHAR_HEX: {
+
+          read: function(original) {
+
+            var test = original.match(/^#([A-F0-9])([A-F0-9])([A-F0-9])$/i);
+            if (test === null) return false;
+
+            return {
+              space: 'HEX',
+              hex: parseInt(
+                  '0x' +
+                      test[1].toString() + test[1].toString() +
+                      test[2].toString() + test[2].toString() +
+                      test[3].toString() + test[3].toString())
+            };
+
+          },
+
+          write: toString
+
+        },
+
+        SIX_CHAR_HEX: {
+
+          read: function(original) {
+
+            var test = original.match(/^#([A-F0-9]{6})$/i);
+            if (test === null) return false;
+
+            return {
+              space: 'HEX',
+              hex: parseInt('0x' + test[1].toString())
+            };
+
+          },
+
+          write: toString
+
+        },
+
+        CSS_RGB: {
+
+          read: function(original) {
+
+            var test = original.match(/^rgb\(\s*(.+)\s*,\s*(.+)\s*,\s*(.+)\s*\)/);
+            if (test === null) return false;
+
+            return {
+              space: 'RGB',
+              r: parseFloat(test[1]),
+              g: parseFloat(test[2]),
+              b: parseFloat(test[3])
+            };
+
+          },
+
+          write: toString
+
+        },
+
+        CSS_RGBA: {
+
+          read: function(original) {
+
+            var test = original.match(/^rgba\(\s*(.+)\s*,\s*(.+)\s*,\s*(.+)\s*\,\s*(.+)\s*\)/);
+            if (test === null) return false;
+
+            return {
+              space: 'RGB',
+              r: parseFloat(test[1]),
+              g: parseFloat(test[2]),
+              b: parseFloat(test[3]),
+              a: parseFloat(test[4])
+            };
+
+          },
+
+          write: toString
+
+        }
+
+      }
+
+    },
+
+    // Numbers
+    {
+
+      litmus: common.isNumber,
+
+      conversions: {
+
+        HEX: {
+          read: function(original) {
+            return {
+              space: 'HEX',
+              hex: original,
+              conversionName: 'HEX'
+            }
+          },
+
+          write: function(color) {
+            return color.hex;
+          }
+        }
+
+      }
+
+    },
+
+    // Arrays
+    {
+
+      litmus: common.isArray,
+
+      conversions: {
+
+        RGB_ARRAY: {
+          read: function(original) {
+            if (original.length != 3) return false;
+            return {
+              space: 'RGB',
+              r: original[0],
+              g: original[1],
+              b: original[2]
+            };
+          },
+
+          write: function(color) {
+            return [color.r, color.g, color.b];
+          }
+
+        },
+
+        RGBA_ARRAY: {
+          read: function(original) {
+            if (original.length != 4) return false;
+            return {
+              space: 'RGB',
+              r: original[0],
+              g: original[1],
+              b: original[2],
+              a: original[3]
+            };
+          },
+
+          write: function(color) {
+            return [color.r, color.g, color.b, color.a];
+          }
+
+        }
+
+      }
+
+    },
+
+    // Objects
+    {
+
+      litmus: common.isObject,
+
+      conversions: {
+
+        RGBA_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.r) &&
+                common.isNumber(original.g) &&
+                common.isNumber(original.b) &&
+                common.isNumber(original.a)) {
+              return {
+                space: 'RGB',
+                r: original.r,
+                g: original.g,
+                b: original.b,
+                a: original.a
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              r: color.r,
+              g: color.g,
+              b: color.b,
+              a: color.a
+            }
+          }
+        },
+
+        RGB_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.r) &&
+                common.isNumber(original.g) &&
+                common.isNumber(original.b)) {
+              return {
+                space: 'RGB',
+                r: original.r,
+                g: original.g,
+                b: original.b
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              r: color.r,
+              g: color.g,
+              b: color.b
+            }
+          }
+        },
+
+        HSVA_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.h) &&
+                common.isNumber(original.s) &&
+                common.isNumber(original.v) &&
+                common.isNumber(original.a)) {
+              return {
+                space: 'HSV',
+                h: original.h,
+                s: original.s,
+                v: original.v,
+                a: original.a
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              h: color.h,
+              s: color.s,
+              v: color.v,
+              a: color.a
+            }
+          }
+        },
+
+        HSV_OBJ: {
+          read: function(original) {
+            if (common.isNumber(original.h) &&
+                common.isNumber(original.s) &&
+                common.isNumber(original.v)) {
+              return {
+                space: 'HSV',
+                h: original.h,
+                s: original.s,
+                v: original.v
+              }
+            }
+            return false;
+          },
+
+          write: function(color) {
+            return {
+              h: color.h,
+              s: color.s,
+              v: color.v
+            }
+          }
+
+        }
+
+      }
+
+    }
+
+
+  ];
+
+  return interpret;
+
+
+})(dat.color.toString,
+dat.utils.common);
+
+
+dat.GUI = dat.gui.GUI = (function (css, saveDialogueContents, styleSheet, controllerFactory, Controller, BooleanController, FunctionController, NumberControllerBox, NumberControllerSlider, OptionController, ColorController, requestAnimationFrame, CenteredDiv, dom, common) {
+
+  css.inject(styleSheet);
+
+  /** Outer-most className for GUI's */
+  var CSS_NAMESPACE = 'dg';
+
+  var HIDE_KEY_CODE = 72;
+
+  /** The only value shared between the JS and SCSS. Use caution. */
+  var CLOSE_BUTTON_HEIGHT = 20;
+
+  var DEFAULT_DEFAULT_PRESET_NAME = 'Default';
+
+  var SUPPORTS_LOCAL_STORAGE = (function() {
+    try {
+      return 'localStorage' in window && window['localStorage'] !== null;
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  var SAVE_DIALOGUE;
+
+  /** Have we yet to create an autoPlace GUI? */
+  var auto_place_virgin = true;
+
+  /** Fixed position div that auto place GUI's go inside */
+  var auto_place_container;
+
+  /** Are we hiding the GUI's ? */
+  var hide = false;
+
+  /** GUI's which should be hidden */
+  var hideable_guis = [];
+
+  /**
+   * A lightweight controller library for JavaScript. It allows you to easily
+   * manipulate variables and fire functions on the fly.
+   * @class
+   *
+   * @member dat.gui
+   *
+   * @param {Object} [params]
+   * @param {String} [params.name] The name of this GUI.
+   * @param {Object} [params.load] JSON object representing the saved state of
+   * this GUI.
+   * @param {Boolean} [params.auto=true]
+   * @param {dat.gui.GUI} [params.parent] The GUI I'm nested in.
+   * @param {Boolean} [params.closed] If true, starts closed
+   */
+  var GUI = function(params) {
+
+    var _this = this;
+
+    /**
+     * Outermost DOM Element
+     * @type DOMElement
+     */
+    this.domElement = document.createElement('div');
+    this.__ul = document.createElement('ul');
+    this.domElement.appendChild(this.__ul);
+
+    dom.addClass(this.domElement, CSS_NAMESPACE);
+
+    /**
+     * Nested GUI's by name
+     * @ignore
+     */
+    this.__folders = {};
+
+    this.__controllers = [];
+
+    /**
+     * List of objects I'm remembering for save, only used in top level GUI
+     * @ignore
+     */
+    this.__rememberedObjects = [];
+
+    /**
+     * Maps the index of remembered objects to a map of controllers, only used
+     * in top level GUI.
+     *
+     * @private
+     * @ignore
+     *
+     * @example
+     * [
+     *  {
+     *    propertyName: Controller,
+     *    anotherPropertyName: Controller
+     *  },
+     *  {
+     *    propertyName: Controller
+     *  }
+     * ]
+     */
+    this.__rememberedObjectIndecesToControllers = [];
+
+    this.__listening = [];
+
+    params = params || {};
+
+    // Default parameters
+    params = common.defaults(params, {
+      autoPlace: true,
+      width: GUI.DEFAULT_WIDTH
+    });
+
+    params = common.defaults(params, {
+      resizable: params.autoPlace,
+      hideable: params.autoPlace
+    });
+
+
+    if (!common.isUndefined(params.load)) {
+
+      // Explicit preset
+      if (params.preset) params.load.preset = params.preset;
+
+    } else {
+
+      params.load = { preset: DEFAULT_DEFAULT_PRESET_NAME };
+
+    }
+
+    if (common.isUndefined(params.parent) && params.hideable) {
+      hideable_guis.push(this);
+    }
+
+    // Only root level GUI's are resizable.
+    params.resizable = common.isUndefined(params.parent) && params.resizable;
+
+
+    if (params.autoPlace && common.isUndefined(params.scrollable)) {
+      params.scrollable = true;
+    }
+//    params.scrollable = common.isUndefined(params.parent) && params.scrollable === true;
+
+    // Not part of params because I don't want people passing this in via
+    // constructor. Should be a 'remembered' value.
+    var use_local_storage =
+        SUPPORTS_LOCAL_STORAGE &&
+            localStorage.getItem(getLocalStorageHash(this, 'isLocal')) === 'true';
+
+    Object.defineProperties(this,
+
+        /** @lends dat.gui.GUI.prototype */
+        {
+
+          /**
+           * The parent <code>GUI</code>
+           * @type dat.gui.GUI
+           */
+          parent: {
+            get: function() {
+              return params.parent;
+            }
+          },
+
+          scrollable: {
+            get: function() {
+              return params.scrollable;
+            }
+          },
+
+          /**
+           * Handles <code>GUI</code>'s element placement for you
+           * @type Boolean
+           */
+          autoPlace: {
+            get: function() {
+              return params.autoPlace;
+            }
+          },
+
+          /**
+           * The identifier for a set of saved values
+           * @type String
+           */
+          preset: {
+
+            get: function() {
+              if (_this.parent) {
+                return _this.getRoot().preset;
+              } else {
+                return params.load.preset;
+              }
+            },
+
+            set: function(v) {
+              if (_this.parent) {
+                _this.getRoot().preset = v;
+              } else {
+                params.load.preset = v;
+              }
+              setPresetSelectIndex(this);
+              _this.revert();
+            }
+
+          },
+
+          /**
+           * The width of <code>GUI</code> element
+           * @type Number
+           */
+          width: {
+            get: function() {
+              return params.width;
+            },
+            set: function(v) {
+              params.width = v;
+              setWidth(_this, v);
+            }
+          },
+
+          /**
+           * The name of <code>GUI</code>. Used for folders. i.e
+           * a folder's name
+           * @type String
+           */
+          name: {
+            get: function() {
+              return params.name;
+            },
+            set: function(v) {
+              // TODO Check for collisions among sibling folders
+              params.name = v;
+              if (title_row_name) {
+                title_row_name.innerHTML = params.name;
+              }
+            }
+          },
+
+          /**
+           * Whether the <code>GUI</code> is collapsed or not
+           * @type Boolean
+           */
+          closed: {
+            get: function() {
+              return params.closed;
+            },
+            set: function(v) {
+              params.closed = v;
+              if (params.closed) {
+                dom.addClass(_this.__ul, GUI.CLASS_CLOSED);
+              } else {
+                dom.removeClass(_this.__ul, GUI.CLASS_CLOSED);
+              }
+              // For browsers that aren't going to respect the CSS transition,
+              // Lets just check our height against the window height right off
+              // the bat.
+              this.onResize();
+
+              if (_this.__closeButton) {
+                _this.__closeButton.innerHTML = v ? GUI.TEXT_OPEN : GUI.TEXT_CLOSED;
+              }
+            }
+          },
+
+          /**
+           * Contains all presets
+           * @type Object
+           */
+          load: {
+            get: function() {
+              return params.load;
+            }
+          },
+
+          /**
+           * Determines whether or not to use <a href="https://developer.mozilla.org/en/DOM/Storage#localStorage">localStorage</a> as the means for
+           * <code>remember</code>ing
+           * @type Boolean
+           */
+          useLocalStorage: {
+
+            get: function() {
+              return use_local_storage;
+            },
+            set: function(bool) {
+              if (SUPPORTS_LOCAL_STORAGE) {
+                use_local_storage = bool;
+                if (bool) {
+                  dom.bind(window, 'unload', saveToLocalStorage);
+                } else {
+                  dom.unbind(window, 'unload', saveToLocalStorage);
+                }
+                localStorage.setItem(getLocalStorageHash(_this, 'isLocal'), bool);
+              }
+            }
+
+          }
+
+        });
+
+    // Are we a root level GUI?
+    if (common.isUndefined(params.parent)) {
+
+      params.closed = false;
+
+      dom.addClass(this.domElement, GUI.CLASS_MAIN);
+      dom.makeSelectable(this.domElement, false);
+
+      // Are we supposed to be loading locally?
+      if (SUPPORTS_LOCAL_STORAGE) {
+
+        if (use_local_storage) {
+
+          _this.useLocalStorage = true;
+
+          var saved_gui = localStorage.getItem(getLocalStorageHash(this, 'gui'));
+
+          if (saved_gui) {
+            params.load = JSON.parse(saved_gui);
+          }
+
+        }
+
+      }
+
+      this.__closeButton = document.createElement('div');
+      this.__closeButton.innerHTML = GUI.TEXT_CLOSED;
+      dom.addClass(this.__closeButton, GUI.CLASS_CLOSE_BUTTON);
+      this.domElement.appendChild(this.__closeButton);
+
+      dom.bind(this.__closeButton, 'click', function() {
+
+        _this.closed = !_this.closed;
+
+
+      });
+
+
+      // Oh, you're a nested GUI!
+    } else {
+
+      if (params.closed === undefined) {
+        params.closed = true;
+      }
+
+      var title_row_name = document.createTextNode(params.name);
+      dom.addClass(title_row_name, 'controller-name');
+
+      var title_row = addRow(_this, title_row_name);
+
+      var on_click_title = function(e) {
+        e.preventDefault();
+        _this.closed = !_this.closed;
+        return false;
+      };
+
+      dom.addClass(this.__ul, GUI.CLASS_CLOSED);
+
+      dom.addClass(title_row, 'title');
+      dom.bind(title_row, 'click', on_click_title);
+
+      if (!params.closed) {
+        this.closed = false;
+      }
+
+    }
+
+    if (params.autoPlace) {
+
+      if (common.isUndefined(params.parent)) {
+
+        if (auto_place_virgin) {
+          auto_place_container = document.createElement('div');
+          dom.addClass(auto_place_container, CSS_NAMESPACE);
+          dom.addClass(auto_place_container, GUI.CLASS_AUTO_PLACE_CONTAINER);
+          document.body.appendChild(auto_place_container);
+          auto_place_virgin = false;
+        }
+
+        // Put it in the dom for you.
+        auto_place_container.appendChild(this.domElement);
+
+        // Apply the auto styles
+        dom.addClass(this.domElement, GUI.CLASS_AUTO_PLACE);
+
+      }
+
+
+      // Make it not elastic.
+      if (!this.parent) setWidth(_this, params.width);
+
+    }
+
+    dom.bind(window, 'resize', function() { _this.onResize() });
+    dom.bind(this.__ul, 'webkitTransitionEnd', function() { _this.onResize(); });
+    dom.bind(this.__ul, 'transitionend', function() { _this.onResize() });
+    dom.bind(this.__ul, 'oTransitionEnd', function() { _this.onResize() });
+    this.onResize();
+
+
+    if (params.resizable) {
+      addResizeHandle(this);
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem(getLocalStorageHash(_this, 'gui'), JSON.stringify(_this.getSaveObject()));
+    }
+
+    var root = _this.getRoot();
+    function resetWidth() {
+        var root = _this.getRoot();
+        root.width += 1;
+        common.defer(function() {
+          root.width -= 1;
+        });
+      }
+
+      if (!params.parent) {
+        resetWidth();
+      }
+
+  };
+
+  GUI.toggleHide = function() {
+
+    hide = !hide;
+    common.each(hideable_guis, function(gui) {
+      gui.domElement.style.zIndex = hide ? -999 : 999;
+      gui.domElement.style.opacity = hide ? 0 : 1;
+    });
+  };
+
+  GUI.CLASS_AUTO_PLACE = 'a';
+  GUI.CLASS_AUTO_PLACE_CONTAINER = 'ac';
+  GUI.CLASS_MAIN = 'main';
+  GUI.CLASS_CONTROLLER_ROW = 'cr';
+  GUI.CLASS_TOO_TALL = 'taller-than-window';
+  GUI.CLASS_CLOSED = 'closed';
+  GUI.CLASS_CLOSE_BUTTON = 'close-button';
+  GUI.CLASS_DRAG = 'drag';
+
+  GUI.DEFAULT_WIDTH = 245;
+  GUI.TEXT_CLOSED = 'Close Controls';
+  GUI.TEXT_OPEN = 'Open Controls';
+
+  dom.bind(window, 'keydown', function(e) {
+
+    if (document.activeElement.type !== 'text' &&
+        (e.which === HIDE_KEY_CODE || e.keyCode == HIDE_KEY_CODE)) {
+      GUI.toggleHide();
+    }
+
+  }, false);
+
+  common.extend(
+
+      GUI.prototype,
+
+      /** @lends dat.gui.GUI */
+      {
+
+        /**
+         * @param object
+         * @param property
+         * @returns {dat.controllers.Controller} The new controller that was added.
+         * @instance
+         */
+        add: function(object, property) {
+
+          return add(
+              this,
+              object,
+              property,
+              {
+                factoryArgs: Array.prototype.slice.call(arguments, 2)
+              }
+          );
+
+        },
+
+        /**
+         * @param object
+         * @param property
+         * @returns {dat.controllers.ColorController} The new controller that was added.
+         * @instance
+         */
+        addColor: function(object, property) {
+
+          return add(
+              this,
+              object,
+              property,
+              {
+                color: true
+              }
+          );
+
+        },
+
+        /**
+         * @param controller
+         * @instance
+         */
+        remove: function(controller) {
+
+          // TODO listening?
+          this.__ul.removeChild(controller.__li);
+          this.__controllers.slice(this.__controllers.indexOf(controller), 1);
+          var _this = this;
+          common.defer(function() {
+            _this.onResize();
+          });
+
+        },
+
+        destroy: function() {
+
+          if (this.autoPlace) {
+            auto_place_container.removeChild(this.domElement);
+          }
+
+        },
+
+        /**
+         * @param name
+         * @returns {dat.gui.GUI} The new folder.
+         * @throws {Error} if this GUI already has a folder by the specified
+         * name
+         * @instance
+         */
+        addFolder: function(name) {
+
+          // We have to prevent collisions on names in order to have a key
+          // by which to remember saved values
+          if (this.__folders[name] !== undefined) {
+            throw new Error('You already have a folder in this GUI by the' +
+                ' name "' + name + '"');
+          }
+
+          var new_gui_params = { name: name, parent: this };
+
+          // We need to pass down the autoPlace trait so that we can
+          // attach event listeners to open/close folder actions to
+          // ensure that a scrollbar appears if the window is too short.
+          new_gui_params.autoPlace = this.autoPlace;
+
+          // Do we have saved appearance data for this folder?
+
+          if (this.load && // Anything loaded?
+              this.load.folders && // Was my parent a dead-end?
+              this.load.folders[name]) { // Did daddy remember me?
+
+            // Start me closed if I was closed
+            new_gui_params.closed = this.load.folders[name].closed;
+
+            // Pass down the loaded data
+            new_gui_params.load = this.load.folders[name];
+
+          }
+
+          var gui = new GUI(new_gui_params);
+          this.__folders[name] = gui;
+
+          var li = addRow(this, gui.domElement);
+          dom.addClass(li, 'folder');
+          return gui;
+
+        },
+
+        open: function() {
+          this.closed = false;
+        },
+
+        close: function() {
+          this.closed = true;
+        },
+
+        onResize: function() {
+
+          var root = this.getRoot();
+
+          if (root.scrollable) {
+
+            var top = dom.getOffset(root.__ul).top;
+            var h = 0;
+
+            common.each(root.__ul.childNodes, function(node) {
+              if (! (root.autoPlace && node === root.__save_row))
+                h += dom.getHeight(node);
+            });
+
+            if (window.innerHeight - top - CLOSE_BUTTON_HEIGHT < h) {
+              dom.addClass(root.domElement, GUI.CLASS_TOO_TALL);
+              root.__ul.style.height = window.innerHeight - top - CLOSE_BUTTON_HEIGHT + 'px';
+            } else {
+              dom.removeClass(root.domElement, GUI.CLASS_TOO_TALL);
+              root.__ul.style.height = 'auto';
+            }
+
+          }
+
+          if (root.__resize_handle) {
+            common.defer(function() {
+              root.__resize_handle.style.height = root.__ul.offsetHeight + 'px';
+            });
+          }
+
+          if (root.__closeButton) {
+            root.__closeButton.style.width = root.width + 'px';
+          }
+
+        },
+
+        /**
+         * Mark objects for saving. The order of these objects cannot change as
+         * the GUI grows. When remembering new objects, append them to the end
+         * of the list.
+         *
+         * @param {Object...} objects
+         * @throws {Error} if not called on a top level GUI.
+         * @instance
+         */
+        remember: function() {
+
+          if (common.isUndefined(SAVE_DIALOGUE)) {
+            SAVE_DIALOGUE = new CenteredDiv();
+            SAVE_DIALOGUE.domElement.innerHTML = saveDialogueContents;
+          }
+
+          if (this.parent) {
+            throw new Error("You can only call remember on a top level GUI.");
+          }
+
+          var _this = this;
+
+          common.each(Array.prototype.slice.call(arguments), function(object) {
+            if (_this.__rememberedObjects.length == 0) {
+              addSaveMenu(_this);
+            }
+            if (_this.__rememberedObjects.indexOf(object) == -1) {
+              _this.__rememberedObjects.push(object);
+            }
+          });
+
+          if (this.autoPlace) {
+            // Set save row width
+            setWidth(this, this.width);
+          }
+
+        },
+
+        /**
+         * @returns {dat.gui.GUI} the topmost parent GUI of a nested GUI.
+         * @instance
+         */
+        getRoot: function() {
+          var gui = this;
+          while (gui.parent) {
+            gui = gui.parent;
+          }
+          return gui;
+        },
+
+        /**
+         * @returns {Object} a JSON object representing the current state of
+         * this GUI as well as its remembered properties.
+         * @instance
+         */
+        getSaveObject: function() {
+
+          var toReturn = this.load;
+
+          toReturn.closed = this.closed;
+
+          // Am I remembering any values?
+          if (this.__rememberedObjects.length > 0) {
+
+            toReturn.preset = this.preset;
+
+            if (!toReturn.remembered) {
+              toReturn.remembered = {};
+            }
+
+            toReturn.remembered[this.preset] = getCurrentPreset(this);
+
+          }
+
+          toReturn.folders = {};
+          common.each(this.__folders, function(element, key) {
+            toReturn.folders[key] = element.getSaveObject();
+          });
+
+          return toReturn;
+
+        },
+
+        save: function() {
+
+          if (!this.load.remembered) {
+            this.load.remembered = {};
+          }
+
+          this.load.remembered[this.preset] = getCurrentPreset(this);
+          markPresetModified(this, false);
+
+        },
+
+        saveAs: function(presetName) {
+
+          if (!this.load.remembered) {
+
+            // Retain default values upon first save
+            this.load.remembered = {};
+            this.load.remembered[DEFAULT_DEFAULT_PRESET_NAME] = getCurrentPreset(this, true);
+
+          }
+
+          this.load.remembered[presetName] = getCurrentPreset(this);
+          this.preset = presetName;
+          addPresetOption(this, presetName, true);
+
+        },
+
+        revert: function(gui) {
+
+          common.each(this.__controllers, function(controller) {
+            // Make revert work on Default.
+            if (!this.getRoot().load.remembered) {
+              controller.setValue(controller.initialValue);
+            } else {
+              recallSavedValue(gui || this.getRoot(), controller);
+            }
+          }, this);
+
+          common.each(this.__folders, function(folder) {
+            folder.revert(folder);
+          });
+
+          if (!gui) {
+            markPresetModified(this.getRoot(), false);
+          }
+
+
+        },
+
+        listen: function(controller) {
+
+          var init = this.__listening.length == 0;
+          this.__listening.push(controller);
+          if (init) updateDisplays(this.__listening);
+
+        }
+
+      }
+
+  );
+
+  function add(gui, object, property, params) {
+
+    if (object[property] === undefined) {
+      throw new Error("Object " + object + " has no property \"" + property + "\"");
+    }
+
+    var controller;
+
+    if (params.color) {
+
+      controller = new ColorController(object, property);
+
+    } else {
+
+      var factoryArgs = [object,property].concat(params.factoryArgs);
+      controller = controllerFactory.apply(gui, factoryArgs);
+
+    }
+
+    if (params.before instanceof Controller) {
+      params.before = params.before.__li;
+    }
+
+    recallSavedValue(gui, controller);
+
+    dom.addClass(controller.domElement, 'c');
+
+    var name = document.createElement('span');
+    dom.addClass(name, 'property-name');
+    name.innerHTML = controller.property;
+
+    var container = document.createElement('div');
+    container.appendChild(name);
+    container.appendChild(controller.domElement);
+
+    var li = addRow(gui, container, params.before);
+
+    dom.addClass(li, GUI.CLASS_CONTROLLER_ROW);
+    dom.addClass(li, typeof controller.getValue());
+
+    augmentController(gui, li, controller);
+
+    gui.__controllers.push(controller);
+
+    return controller;
+
+  }
+
+  /**
+   * Add a row to the end of the GUI or before another row.
+   *
+   * @param gui
+   * @param [dom] If specified, inserts the dom content in the new row
+   * @param [liBefore] If specified, places the new row before another row
+   */
+  function addRow(gui, dom, liBefore) {
+    var li = document.createElement('li');
+    if (dom) li.appendChild(dom);
+    if (liBefore) {
+      gui.__ul.insertBefore(li, params.before);
+    } else {
+      gui.__ul.appendChild(li);
+    }
+    gui.onResize();
+    return li;
+  }
+
+  function augmentController(gui, li, controller) {
+
+    controller.__li = li;
+    controller.__gui = gui;
+
+    common.extend(controller, {
+
+      options: function(options) {
+
+        if (arguments.length > 1) {
+          controller.remove();
+
+          return add(
+              gui,
+              controller.object,
+              controller.property,
+              {
+                before: controller.__li.nextElementSibling,
+                factoryArgs: [common.toArray(arguments)]
+              }
+          );
+
+        }
+
+        if (common.isArray(options) || common.isObject(options)) {
+          controller.remove();
+
+          return add(
+              gui,
+              controller.object,
+              controller.property,
+              {
+                before: controller.__li.nextElementSibling,
+                factoryArgs: [options]
+              }
+          );
+
+        }
+
+      },
+
+      name: function(v) {
+        controller.__li.firstElementChild.firstElementChild.innerHTML = v;
+        return controller;
+      },
+
+      listen: function() {
+        controller.__gui.listen(controller);
+        return controller;
+      },
+
+      remove: function() {
+        controller.__gui.remove(controller);
+        return controller;
+      }
+
+    });
+
+    // All sliders should be accompanied by a box.
+    if (controller instanceof NumberControllerSlider) {
+
+      var box = new NumberControllerBox(controller.object, controller.property,
+          { min: controller.__min, max: controller.__max, step: controller.__step });
+
+      common.each(['updateDisplay', 'onChange', 'onFinishChange'], function(method) {
+        var pc = controller[method];
+        var pb = box[method];
+        controller[method] = box[method] = function() {
+          var args = Array.prototype.slice.call(arguments);
+          pc.apply(controller, args);
+          return pb.apply(box, args);
+        }
+      });
+
+      dom.addClass(li, 'has-slider');
+      controller.domElement.insertBefore(box.domElement, controller.domElement.firstElementChild);
+
+    }
+    else if (controller instanceof NumberControllerBox) {
+
+      var r = function(returned) {
+
+        // Have we defined both boundaries?
+        if (common.isNumber(controller.__min) && common.isNumber(controller.__max)) {
+
+          // Well, then lets just replace this with a slider.
+          controller.remove();
+          return add(
+              gui,
+              controller.object,
+              controller.property,
+              {
+                before: controller.__li.nextElementSibling,
+                factoryArgs: [controller.__min, controller.__max, controller.__step]
+              });
+
+        }
+
+        return returned;
+
+      };
+
+      controller.min = common.compose(r, controller.min);
+      controller.max = common.compose(r, controller.max);
+
+    }
+    else if (controller instanceof BooleanController) {
+
+      dom.bind(li, 'click', function() {
+        dom.fakeEvent(controller.__checkbox, 'click');
+      });
+
+      dom.bind(controller.__checkbox, 'click', function(e) {
+        e.stopPropagation(); // Prevents double-toggle
+      })
+
+    }
+    else if (controller instanceof FunctionController) {
+
+      dom.bind(li, 'click', function() {
+        dom.fakeEvent(controller.__button, 'click');
+      });
+
+      dom.bind(li, 'mouseover', function() {
+        dom.addClass(controller.__button, 'hover');
+      });
+
+      dom.bind(li, 'mouseout', function() {
+        dom.removeClass(controller.__button, 'hover');
+      });
+
+    }
+    else if (controller instanceof ColorController) {
+
+      dom.addClass(li, 'color');
+      controller.updateDisplay = common.compose(function(r) {
+        li.style.borderLeftColor = controller.__color.toString();
+        return r;
+      }, controller.updateDisplay);
+
+      controller.updateDisplay();
+
+    }
+
+    controller.setValue = common.compose(function(r) {
+      if (gui.getRoot().__preset_select && controller.isModified()) {
+        markPresetModified(gui.getRoot(), true);
+      }
+      return r;
+    }, controller.setValue);
+
+  }
+
+  function recallSavedValue(gui, controller) {
+
+    // Find the topmost GUI, that's where remembered objects live.
+    var root = gui.getRoot();
+
+    // Does the object we're controlling match anything we've been told to
+    // remember?
+    var matched_index = root.__rememberedObjects.indexOf(controller.object);
+
+    // Why yes, it does!
+    if (matched_index != -1) {
+
+      // Let me fetch a map of controllers for thcommon.isObject.
+      var controller_map =
+          root.__rememberedObjectIndecesToControllers[matched_index];
+
+      // Ohp, I believe this is the first controller we've created for this
+      // object. Lets make the map fresh.
+      if (controller_map === undefined) {
+        controller_map = {};
+        root.__rememberedObjectIndecesToControllers[matched_index] =
+            controller_map;
+      }
+
+      // Keep track of this controller
+      controller_map[controller.property] = controller;
+
+      // Okay, now have we saved any values for this controller?
+      if (root.load && root.load.remembered) {
+
+        var preset_map = root.load.remembered;
+
+        // Which preset are we trying to load?
+        var preset;
+
+        if (preset_map[gui.preset]) {
+
+          preset = preset_map[gui.preset];
+
+        } else if (preset_map[DEFAULT_DEFAULT_PRESET_NAME]) {
+
+          // Uhh, you can have the default instead?
+          preset = preset_map[DEFAULT_DEFAULT_PRESET_NAME];
+
+        } else {
+
+          // Nada.
+
+          return;
+
+        }
+
+
+        // Did the loaded object remember thcommon.isObject?
+        if (preset[matched_index] &&
+
+          // Did we remember this particular property?
+            preset[matched_index][controller.property] !== undefined) {
+
+          // We did remember something for this guy ...
+          var value = preset[matched_index][controller.property];
+
+          // And that's what it is.
+          controller.initialValue = value;
+          controller.setValue(value);
+
+        }
+
+      }
+
+    }
+
+  }
+
+  function getLocalStorageHash(gui, key) {
+    // TODO how does this deal with multiple GUI's?
+    return document.location.href + '.' + key;
+
+  }
+
+  function addSaveMenu(gui) {
+
+    var div = gui.__save_row = document.createElement('li');
+
+    dom.addClass(gui.domElement, 'has-save');
+
+    gui.__ul.insertBefore(div, gui.__ul.firstChild);
+
+    dom.addClass(div, 'save-row');
+
+    var gears = document.createElement('span');
+    gears.innerHTML = '&nbsp;';
+    dom.addClass(gears, 'button gears');
+
+    // TODO replace with FunctionController
+    var button = document.createElement('span');
+    button.innerHTML = 'Save';
+    dom.addClass(button, 'button');
+    dom.addClass(button, 'save');
+
+    var button2 = document.createElement('span');
+    button2.innerHTML = 'New';
+    dom.addClass(button2, 'button');
+    dom.addClass(button2, 'save-as');
+
+    var button3 = document.createElement('span');
+    button3.innerHTML = 'Revert';
+    dom.addClass(button3, 'button');
+    dom.addClass(button3, 'revert');
+
+    var select = gui.__preset_select = document.createElement('select');
+
+    if (gui.load && gui.load.remembered) {
+
+      common.each(gui.load.remembered, function(value, key) {
+        addPresetOption(gui, key, key == gui.preset);
+      });
+
+    } else {
+      addPresetOption(gui, DEFAULT_DEFAULT_PRESET_NAME, false);
+    }
+
+    dom.bind(select, 'change', function() {
+
+
+      for (var index = 0; index < gui.__preset_select.length; index++) {
+        gui.__preset_select[index].innerHTML = gui.__preset_select[index].value;
+      }
+
+      gui.preset = this.value;
+
+    });
+
+    div.appendChild(select);
+    div.appendChild(gears);
+    div.appendChild(button);
+    div.appendChild(button2);
+    div.appendChild(button3);
+
+    if (SUPPORTS_LOCAL_STORAGE) {
+
+      var saveLocally = document.getElementById('dg-save-locally');
+      var explain = document.getElementById('dg-local-explain');
+
+      saveLocally.style.display = 'block';
+
+      var localStorageCheckBox = document.getElementById('dg-local-storage');
+
+      if (localStorage.getItem(getLocalStorageHash(gui, 'isLocal')) === 'true') {
+        localStorageCheckBox.setAttribute('checked', 'checked');
+      }
+
+      function showHideExplain() {
+        explain.style.display = gui.useLocalStorage ? 'block' : 'none';
+      }
+
+      showHideExplain();
+
+      // TODO: Use a boolean controller, fool!
+      dom.bind(localStorageCheckBox, 'change', function() {
+        gui.useLocalStorage = !gui.useLocalStorage;
+        showHideExplain();
+      });
+
+    }
+
+    var newConstructorTextArea = document.getElementById('dg-new-constructor');
+
+    dom.bind(newConstructorTextArea, 'keydown', function(e) {
+      if (e.metaKey && (e.which === 67 || e.keyCode == 67)) {
+        SAVE_DIALOGUE.hide();
+      }
+    });
+
+    dom.bind(gears, 'click', function() {
+      newConstructorTextArea.innerHTML = JSON.stringify(gui.getSaveObject(), undefined, 2);
+      SAVE_DIALOGUE.show();
+      newConstructorTextArea.focus();
+      newConstructorTextArea.select();
+    });
+
+    dom.bind(button, 'click', function() {
+      gui.save();
+    });
+
+    dom.bind(button2, 'click', function() {
+      var presetName = prompt('Enter a new preset name.');
+      if (presetName) gui.saveAs(presetName);
+    });
+
+    dom.bind(button3, 'click', function() {
+      gui.revert();
+    });
+
+//    div.appendChild(button2);
+
+  }
+
+  function addResizeHandle(gui) {
+
+    gui.__resize_handle = document.createElement('div');
+
+    common.extend(gui.__resize_handle.style, {
+
+      width: '6px',
+      marginLeft: '-3px',
+      height: '200px',
+      cursor: 'ew-resize',
+      position: 'absolute'
+//      border: '1px solid blue'
+
+    });
+
+    var pmouseX;
+
+    dom.bind(gui.__resize_handle, 'mousedown', dragStart);
+    dom.bind(gui.__closeButton, 'mousedown', dragStart);
+
+    gui.domElement.insertBefore(gui.__resize_handle, gui.domElement.firstElementChild);
+
+    function dragStart(e) {
+
+      e.preventDefault();
+
+      pmouseX = e.clientX;
+
+      dom.addClass(gui.__closeButton, GUI.CLASS_DRAG);
+      dom.bind(window, 'mousemove', drag);
+      dom.bind(window, 'mouseup', dragStop);
+
+      return false;
+
+    }
+
+    function drag(e) {
+
+      e.preventDefault();
+
+      gui.width += pmouseX - e.clientX;
+      gui.onResize();
+      pmouseX = e.clientX;
+
+      return false;
+
+    }
+
+    function dragStop() {
+
+      dom.removeClass(gui.__closeButton, GUI.CLASS_DRAG);
+      dom.unbind(window, 'mousemove', drag);
+      dom.unbind(window, 'mouseup', dragStop);
+
+    }
+
+  }
+
+  function setWidth(gui, w) {
+    gui.domElement.style.width = w + 'px';
+    // Auto placed save-rows are position fixed, so we have to
+    // set the width manually if we want it to bleed to the edge
+    if (gui.__save_row && gui.autoPlace) {
+      gui.__save_row.style.width = w + 'px';
+    }if (gui.__closeButton) {
+      gui.__closeButton.style.width = w + 'px';
+    }
+  }
+
+  function getCurrentPreset(gui, useInitialValues) {
+
+    var toReturn = {};
+
+    // For each object I'm remembering
+    common.each(gui.__rememberedObjects, function(val, index) {
+
+      var saved_values = {};
+
+      // The controllers I've made for thcommon.isObject by property
+      var controller_map =
+          gui.__rememberedObjectIndecesToControllers[index];
+
+      // Remember each value for each property
+      common.each(controller_map, function(controller, property) {
+        saved_values[property] = useInitialValues ? controller.initialValue : controller.getValue();
+      });
+
+      // Save the values for thcommon.isObject
+      toReturn[index] = saved_values;
+
+    });
+
+    return toReturn;
+
+  }
+
+  function addPresetOption(gui, name, setSelected) {
+    var opt = document.createElement('option');
+    opt.innerHTML = name;
+    opt.value = name;
+    gui.__preset_select.appendChild(opt);
+    if (setSelected) {
+      gui.__preset_select.selectedIndex = gui.__preset_select.length - 1;
+    }
+  }
+
+  function setPresetSelectIndex(gui) {
+    for (var index = 0; index < gui.__preset_select.length; index++) {
+      if (gui.__preset_select[index].value == gui.preset) {
+        gui.__preset_select.selectedIndex = index;
+      }
+    }
+  }
+
+  function markPresetModified(gui, modified) {
+    var opt = gui.__preset_select[gui.__preset_select.selectedIndex];
+//    console.log('mark', modified, opt);
+    if (modified) {
+      opt.innerHTML = opt.value + "*";
+    } else {
+      opt.innerHTML = opt.value;
+    }
+  }
+
+  function updateDisplays(controllerArray) {
+
+
+    if (controllerArray.length != 0) {
+
+      requestAnimationFrame(function() {
+        updateDisplays(controllerArray);
+      });
+
+    }
+
+    common.each(controllerArray, function(c) {
+      c.updateDisplay();
+    });
+
+  }
+
+  return GUI;
+
+})(dat.utils.css,
+"<div id=\"dg-save\" class=\"dg dialogue\">\n\n  Here's the new load parameter for your <code>GUI</code>'s constructor:\n\n  <textarea id=\"dg-new-constructor\"></textarea>\n\n  <div id=\"dg-save-locally\">\n\n    <input id=\"dg-local-storage\" type=\"checkbox\"/> Automatically save\n    values to <code>localStorage</code> on exit.\n\n    <div id=\"dg-local-explain\">The values saved to <code>localStorage</code> will\n      override those passed to <code>dat.GUI</code>'s constructor. This makes it\n      easier to work incrementally, but <code>localStorage</code> is fragile,\n      and your friends may not see the same values you do.\n      \n    </div>\n    \n  </div>\n\n</div>",
+".dg ul{list-style:none;margin:0;padding:0;width:100%;clear:both}.dg.ac{position:fixed;top:0;left:0;right:0;height:0;z-index:0}.dg:not(.ac) .main{overflow:hidden}.dg.main{-webkit-transition:opacity 0.1s linear;-o-transition:opacity 0.1s linear;-moz-transition:opacity 0.1s linear;transition:opacity 0.1s linear}.dg.main.taller-than-window{overflow-y:auto}.dg.main.taller-than-window .close-button{opacity:1;margin-top:-1px;border-top:1px solid #2c2c2c}.dg.main ul.closed .close-button{opacity:1 !important}.dg.main:hover .close-button,.dg.main .close-button.drag{opacity:1}.dg.main .close-button{-webkit-transition:opacity 0.1s linear;-o-transition:opacity 0.1s linear;-moz-transition:opacity 0.1s linear;transition:opacity 0.1s linear;border:0;position:absolute;line-height:19px;height:20px;cursor:pointer;text-align:center;background-color:#000}.dg.main .close-button:hover{background-color:#111}.dg.a{float:right;margin-right:15px;overflow-x:hidden}.dg.a.has-save ul{margin-top:27px}.dg.a.has-save ul.closed{margin-top:0}.dg.a .save-row{position:fixed;top:0;z-index:1002}.dg li{-webkit-transition:height 0.1s ease-out;-o-transition:height 0.1s ease-out;-moz-transition:height 0.1s ease-out;transition:height 0.1s ease-out}.dg li:not(.folder){cursor:auto;height:27px;line-height:27px;overflow:hidden;padding:0 4px 0 5px}.dg li.folder{padding:0;border-left:4px solid rgba(0,0,0,0)}.dg li.title{cursor:pointer;margin-left:-4px}.dg .closed li:not(.title),.dg .closed ul li,.dg .closed ul li > *{height:0;overflow:hidden;border:0}.dg .cr{clear:both;padding-left:3px;height:27px}.dg .property-name{cursor:default;float:left;clear:left;width:40%;overflow:hidden;text-overflow:ellipsis}.dg .c{float:left;width:60%}.dg .c input[type=text]{border:0;margin-top:4px;padding:3px;width:100%;float:right}.dg .has-slider input[type=text]{width:30%;margin-left:0}.dg .slider{float:left;width:66%;margin-left:-5px;margin-right:0;height:19px;margin-top:4px}.dg .slider-fg{height:100%}.dg .c input[type=checkbox]{margin-top:9px}.dg .c select{margin-top:5px}.dg .cr.function,.dg .cr.function .property-name,.dg .cr.function *,.dg .cr.boolean,.dg .cr.boolean *{cursor:pointer}.dg .selector{display:none;position:absolute;margin-left:-9px;margin-top:23px;z-index:10}.dg .c:hover .selector,.dg .selector.drag{display:block}.dg li.save-row{padding:0}.dg li.save-row .button{display:inline-block;padding:0px 6px}.dg.dialogue{background-color:#222;width:460px;padding:15px;font-size:13px;line-height:15px}#dg-new-constructor{padding:10px;color:#222;font-family:Monaco, monospace;font-size:10px;border:0;resize:none;box-shadow:inset 1px 1px 1px #888;word-wrap:break-word;margin:12px 0;display:block;width:440px;overflow-y:scroll;height:100px;position:relative}#dg-local-explain{display:none;font-size:11px;line-height:17px;border-radius:3px;background-color:#333;padding:8px;margin-top:10px}#dg-local-explain code{font-size:10px}#dat-gui-save-locally{display:none}.dg{color:#eee;font:11px 'Lucida Grande', sans-serif;text-shadow:0 -1px 0 #111}.dg.main::-webkit-scrollbar{width:5px;background:#1a1a1a}.dg.main::-webkit-scrollbar-corner{height:0;display:none}.dg.main::-webkit-scrollbar-thumb{border-radius:5px;background:#676767}.dg li:not(.folder){background:#1a1a1a;border-bottom:1px solid #2c2c2c}.dg li.save-row{line-height:25px;background:#dad5cb;border:0}.dg li.save-row select{margin-left:5px;width:108px}.dg li.save-row .button{margin-left:5px;margin-top:1px;border-radius:2px;font-size:9px;line-height:7px;padding:4px 4px 5px 4px;background:#c5bdad;color:#fff;text-shadow:0 1px 0 #b0a58f;box-shadow:0 -1px 0 #b0a58f;cursor:pointer}.dg li.save-row .button.gears{background:#c5bdad url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAANCAYAAAB/9ZQ7AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAQJJREFUeNpiYKAU/P//PwGIC/ApCABiBSAW+I8AClAcgKxQ4T9hoMAEUrxx2QSGN6+egDX+/vWT4e7N82AMYoPAx/evwWoYoSYbACX2s7KxCxzcsezDh3evFoDEBYTEEqycggWAzA9AuUSQQgeYPa9fPv6/YWm/Acx5IPb7ty/fw+QZblw67vDs8R0YHyQhgObx+yAJkBqmG5dPPDh1aPOGR/eugW0G4vlIoTIfyFcA+QekhhHJhPdQxbiAIguMBTQZrPD7108M6roWYDFQiIAAv6Aow/1bFwXgis+f2LUAynwoIaNcz8XNx3Dl7MEJUDGQpx9gtQ8YCueB+D26OECAAQDadt7e46D42QAAAABJRU5ErkJggg==) 2px 1px no-repeat;height:7px;width:8px}.dg li.save-row .button:hover{background-color:#bab19e;box-shadow:0 -1px 0 #b0a58f}.dg li.folder{border-bottom:0}.dg li.title{padding-left:16px;background:#000 url(data:image/gif;base64,R0lGODlhBQAFAJEAAP////Pz8////////yH5BAEAAAIALAAAAAAFAAUAAAIIlI+hKgFxoCgAOw==) 6px 10px no-repeat;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.2)}.dg .closed li.title{background-image:url(data:image/gif;base64,R0lGODlhBQAFAJEAAP////Pz8////////yH5BAEAAAIALAAAAAAFAAUAAAIIlGIWqMCbWAEAOw==)}.dg .cr.boolean{border-left:3px solid #806787}.dg .cr.function{border-left:3px solid #e61d5f}.dg .cr.number{border-left:3px solid #2fa1d6}.dg .cr.number input[type=text]{color:#2fa1d6}.dg .cr.string{border-left:3px solid #1ed36f}.dg .cr.string input[type=text]{color:#1ed36f}.dg .cr.function:hover,.dg .cr.boolean:hover{background:#111}.dg .c input[type=text]{background:#303030;outline:none}.dg .c input[type=text]:hover{background:#3c3c3c}.dg .c input[type=text]:focus{background:#494949;color:#fff}.dg .c .slider{background:#303030;cursor:ew-resize}.dg .c .slider-fg{background:#2fa1d6}.dg .c .slider:hover{background:#3c3c3c}.dg .c .slider:hover .slider-fg{background:#44abda}\n",
+dat.controllers.factory = (function (OptionController, NumberControllerBox, NumberControllerSlider, StringController, FunctionController, BooleanController, common) {
+
+      return function(object, property) {
+
+        var initialValue = object[property];
+
+        // Providing options?
+        if (common.isArray(arguments[2]) || common.isObject(arguments[2])) {
+          return new OptionController(object, property, arguments[2]);
+        }
+
+        // Providing a map?
+
+        if (common.isNumber(initialValue)) {
+
+          if (common.isNumber(arguments[2]) && common.isNumber(arguments[3])) {
+
+            // Has min and max.
+            return new NumberControllerSlider(object, property, arguments[2], arguments[3]);
+
+          } else {
+
+            return new NumberControllerBox(object, property, { min: arguments[2], max: arguments[3] });
+
+          }
+
+        }
+
+        if (common.isString(initialValue)) {
+          return new StringController(object, property);
+        }
+
+        if (common.isFunction(initialValue)) {
+          return new FunctionController(object, property, '');
+        }
+
+        if (common.isBoolean(initialValue)) {
+          return new BooleanController(object, property);
+        }
+
+      }
+
+    })(dat.controllers.OptionController,
+dat.controllers.NumberControllerBox,
+dat.controllers.NumberControllerSlider,
+dat.controllers.StringController = (function (Controller, dom, common) {
+
+  /**
+   * @class Provides a text input to alter the string property of an object.
+   *
+   * @extends dat.controllers.Controller
+   *
+   * @param {Object} object The object to be manipulated
+   * @param {string} property The name of the property to be manipulated
+   *
+   * @member dat.controllers
+   */
+  var StringController = function(object, property) {
+
+    StringController.superclass.call(this, object, property);
+
+    var _this = this;
+
+    this.__input = document.createElement('input');
+    this.__input.setAttribute('type', 'text');
+
+    dom.bind(this.__input, 'keyup', onChange);
+    dom.bind(this.__input, 'change', onChange);
+    dom.bind(this.__input, 'blur', onBlur);
+    dom.bind(this.__input, 'keydown', function(e) {
+      if (e.keyCode === 13) {
+        this.blur();
+      }
+    });
+    
+
+    function onChange() {
+      _this.setValue(_this.__input.value);
+    }
+
+    function onBlur() {
+      if (_this.__onFinishChange) {
+        _this.__onFinishChange.call(_this, _this.getValue());
+      }
+    }
+
+    this.updateDisplay();
+
+    this.domElement.appendChild(this.__input);
+
+  };
+
+  StringController.superclass = Controller;
+
+  common.extend(
+
+      StringController.prototype,
+      Controller.prototype,
+
+      {
+
+        updateDisplay: function() {
+          // Stops the caret from moving on account of:
+          // keyup -> setValue -> updateDisplay
+          if (!dom.isActive(this.__input)) {
+            this.__input.value = this.getValue();
+          }
+          return StringController.superclass.prototype.updateDisplay.call(this);
+        }
+
+      }
+
+  );
+
+  return StringController;
+
+})(dat.controllers.Controller,
+dat.dom.dom,
+dat.utils.common),
+dat.controllers.FunctionController,
+dat.controllers.BooleanController,
+dat.utils.common),
+dat.controllers.Controller,
+dat.controllers.BooleanController,
+dat.controllers.FunctionController,
+dat.controllers.NumberControllerBox,
+dat.controllers.NumberControllerSlider,
+dat.controllers.OptionController,
+dat.controllers.ColorController = (function (Controller, dom, Color, interpret, common) {
+
+  var ColorController = function(object, property) {
+
+    ColorController.superclass.call(this, object, property);
+
+    this.__color = new Color(this.getValue());
+    this.__temp = new Color(0);
+
+    var _this = this;
+
+    this.domElement = document.createElement('div');
+
+    dom.makeSelectable(this.domElement, false);
+
+    this.__selector = document.createElement('div');
+    this.__selector.className = 'selector';
+
+    this.__saturation_field = document.createElement('div');
+    this.__saturation_field.className = 'saturation-field';
+
+    this.__field_knob = document.createElement('div');
+    this.__field_knob.className = 'field-knob';
+    this.__field_knob_border = '2px solid ';
+
+    this.__hue_knob = document.createElement('div');
+    this.__hue_knob.className = 'hue-knob';
+
+    this.__hue_field = document.createElement('div');
+    this.__hue_field.className = 'hue-field';
+
+    this.__input = document.createElement('input');
+    this.__input.type = 'text';
+    this.__input_textShadow = '0 1px 1px ';
+
+    dom.bind(this.__input, 'keydown', function(e) {
+      if (e.keyCode === 13) { // on enter
+        onBlur.call(this);
+      }
+    });
+
+    dom.bind(this.__input, 'blur', onBlur);
+
+    dom.bind(this.__selector, 'mousedown', function(e) {
+
+      dom
+        .addClass(this, 'drag')
+        .bind(window, 'mouseup', function(e) {
+          dom.removeClass(_this.__selector, 'drag');
+        });
+
+    });
+
+    var value_field = document.createElement('div');
+
+    common.extend(this.__selector.style, {
+      width: '122px',
+      height: '102px',
+      padding: '3px',
+      backgroundColor: '#222',
+      boxShadow: '0px 1px 3px rgba(0,0,0,0.3)'
+    });
+
+    common.extend(this.__field_knob.style, {
+      position: 'absolute',
+      width: '12px',
+      height: '12px',
+      border: this.__field_knob_border + (this.__color.v < .5 ? '#fff' : '#000'),
+      boxShadow: '0px 1px 3px rgba(0,0,0,0.5)',
+      borderRadius: '12px',
+      zIndex: 1
+    });
+    
+    common.extend(this.__hue_knob.style, {
+      position: 'absolute',
+      width: '15px',
+      height: '2px',
+      borderRight: '4px solid #fff',
+      zIndex: 1
+    });
+
+    common.extend(this.__saturation_field.style, {
+      width: '100px',
+      height: '100px',
+      border: '1px solid #555',
+      marginRight: '3px',
+      display: 'inline-block',
+      cursor: 'pointer'
+    });
+
+    common.extend(value_field.style, {
+      width: '100%',
+      height: '100%',
+      background: 'none'
+    });
+    
+    linearGradient(value_field, 'top', 'rgba(0,0,0,0)', '#000');
+
+    common.extend(this.__hue_field.style, {
+      width: '15px',
+      height: '100px',
+      display: 'inline-block',
+      border: '1px solid #555',
+      cursor: 'ns-resize'
+    });
+
+    hueGradient(this.__hue_field);
+
+    common.extend(this.__input.style, {
+      outline: 'none',
+//      width: '120px',
+      textAlign: 'center',
+//      padding: '4px',
+//      marginBottom: '6px',
+      color: '#fff',
+      border: 0,
+      fontWeight: 'bold',
+      textShadow: this.__input_textShadow + 'rgba(0,0,0,0.7)'
+    });
+
+    dom.bind(this.__saturation_field, 'mousedown', fieldDown);
+    dom.bind(this.__field_knob, 'mousedown', fieldDown);
+
+    dom.bind(this.__hue_field, 'mousedown', function(e) {
+      setH(e);
+      dom.bind(window, 'mousemove', setH);
+      dom.bind(window, 'mouseup', unbindH);
+    });
+
+    function fieldDown(e) {
+      setSV(e);
+      // document.body.style.cursor = 'none';
+      dom.bind(window, 'mousemove', setSV);
+      dom.bind(window, 'mouseup', unbindSV);
+    }
+
+    function unbindSV() {
+      dom.unbind(window, 'mousemove', setSV);
+      dom.unbind(window, 'mouseup', unbindSV);
+      // document.body.style.cursor = 'default';
+    }
+
+    function onBlur() {
+      var i = interpret(this.value);
+      if (i !== false) {
+        _this.__color.__state = i;
+        _this.setValue(_this.__color.toOriginal());
+      } else {
+        this.value = _this.__color.toString();
+      }
+    }
+
+    function unbindH() {
+      dom.unbind(window, 'mousemove', setH);
+      dom.unbind(window, 'mouseup', unbindH);
+    }
+
+    this.__saturation_field.appendChild(value_field);
+    this.__selector.appendChild(this.__field_knob);
+    this.__selector.appendChild(this.__saturation_field);
+    this.__selector.appendChild(this.__hue_field);
+    this.__hue_field.appendChild(this.__hue_knob);
+
+    this.domElement.appendChild(this.__input);
+    this.domElement.appendChild(this.__selector);
+
+    this.updateDisplay();
+
+    function setSV(e) {
+
+      e.preventDefault();
+
+      var w = dom.getWidth(_this.__saturation_field);
+      var o = dom.getOffset(_this.__saturation_field);
+      var s = (e.clientX - o.left + document.body.scrollLeft) / w;
+      var v = 1 - (e.clientY - o.top + document.body.scrollTop) / w;
+
+      if (v > 1) v = 1;
+      else if (v < 0) v = 0;
+
+      if (s > 1) s = 1;
+      else if (s < 0) s = 0;
+
+      _this.__color.v = v;
+      _this.__color.s = s;
+
+      _this.setValue(_this.__color.toOriginal());
+
+
+      return false;
+
+    }
+
+    function setH(e) {
+
+      e.preventDefault();
+
+      var s = dom.getHeight(_this.__hue_field);
+      var o = dom.getOffset(_this.__hue_field);
+      var h = 1 - (e.clientY - o.top + document.body.scrollTop) / s;
+
+      if (h > 1) h = 1;
+      else if (h < 0) h = 0;
+
+      _this.__color.h = h * 360;
+
+      _this.setValue(_this.__color.toOriginal());
+
+      return false;
+
+    }
+
+  };
+
+  ColorController.superclass = Controller;
+
+  common.extend(
+
+      ColorController.prototype,
+      Controller.prototype,
+
+      {
+
+        updateDisplay: function() {
+
+          var i = interpret(this.getValue());
+
+          if (i !== false) {
+
+            var mismatch = false;
+
+            // Check for mismatch on the interpreted value.
+
+            common.each(Color.COMPONENTS, function(component) {
+              if (!common.isUndefined(i[component]) &&
+                  !common.isUndefined(this.__color.__state[component]) &&
+                  i[component] !== this.__color.__state[component]) {
+                mismatch = true;
+                return {}; // break
+              }
+            }, this);
+
+            // If nothing diverges, we keep our previous values
+            // for statefulness, otherwise we recalculate fresh
+            if (mismatch) {
+              common.extend(this.__color.__state, i);
+            }
+
+          }
+
+          common.extend(this.__temp.__state, this.__color.__state);
+
+          this.__temp.a = 1;
+
+          var flip = (this.__color.v < .5 || this.__color.s > .5) ? 255 : 0;
+          var _flip = 255 - flip;
+
+          common.extend(this.__field_knob.style, {
+            marginLeft: 100 * this.__color.s - 7 + 'px',
+            marginTop: 100 * (1 - this.__color.v) - 7 + 'px',
+            backgroundColor: this.__temp.toString(),
+            border: this.__field_knob_border + 'rgb(' + flip + ',' + flip + ',' + flip +')'
+          });
+
+          this.__hue_knob.style.marginTop = (1 - this.__color.h / 360) * 100 + 'px'
+
+          this.__temp.s = 1;
+          this.__temp.v = 1;
+
+          linearGradient(this.__saturation_field, 'left', '#fff', this.__temp.toString());
+
+          common.extend(this.__input.style, {
+            backgroundColor: this.__input.value = this.__color.toString(),
+            color: 'rgb(' + flip + ',' + flip + ',' + flip +')',
+            textShadow: this.__input_textShadow + 'rgba(' + _flip + ',' + _flip + ',' + _flip +',.7)'
+          });
+
+        }
+
+      }
+
+  );
+  
+  var vendors = ['-moz-','-o-','-webkit-','-ms-',''];
+  
+  function linearGradient(elem, x, a, b) {
+    elem.style.background = '';
+    common.each(vendors, function(vendor) {
+      elem.style.cssText += 'background: ' + vendor + 'linear-gradient('+x+', '+a+' 0%, ' + b + ' 100%); ';
+    });
+  }
+  
+  function hueGradient(elem) {
+    elem.style.background = '';
+    elem.style.cssText += 'background: -moz-linear-gradient(top,  #ff0000 0%, #ff00ff 17%, #0000ff 34%, #00ffff 50%, #00ff00 67%, #ffff00 84%, #ff0000 100%);'
+    elem.style.cssText += 'background: -webkit-linear-gradient(top,  #ff0000 0%,#ff00ff 17%,#0000ff 34%,#00ffff 50%,#00ff00 67%,#ffff00 84%,#ff0000 100%);'
+    elem.style.cssText += 'background: -o-linear-gradient(top,  #ff0000 0%,#ff00ff 17%,#0000ff 34%,#00ffff 50%,#00ff00 67%,#ffff00 84%,#ff0000 100%);'
+    elem.style.cssText += 'background: -ms-linear-gradient(top,  #ff0000 0%,#ff00ff 17%,#0000ff 34%,#00ffff 50%,#00ff00 67%,#ffff00 84%,#ff0000 100%);'
+    elem.style.cssText += 'background: linear-gradient(top,  #ff0000 0%,#ff00ff 17%,#0000ff 34%,#00ffff 50%,#00ff00 67%,#ffff00 84%,#ff0000 100%);'
+  }
+
+
+  return ColorController;
+
+})(dat.controllers.Controller,
+dat.dom.dom,
+dat.color.Color = (function (interpret, math, toString, common) {
+
+  var Color = function() {
+
+    this.__state = interpret.apply(this, arguments);
+
+    if (this.__state === false) {
+      throw 'Failed to interpret color arguments';
+    }
+
+    this.__state.a = this.__state.a || 1;
+
+
+  };
+
+  Color.COMPONENTS = ['r','g','b','h','s','v','hex','a'];
+
+  common.extend(Color.prototype, {
+
+    toString: function() {
+      return toString(this);
+    },
+
+    toOriginal: function() {
+      return this.__state.conversion.write(this);
+    }
+
+  });
+
+  defineRGBComponent(Color.prototype, 'r', 2);
+  defineRGBComponent(Color.prototype, 'g', 1);
+  defineRGBComponent(Color.prototype, 'b', 0);
+
+  defineHSVComponent(Color.prototype, 'h');
+  defineHSVComponent(Color.prototype, 's');
+  defineHSVComponent(Color.prototype, 'v');
+
+  Object.defineProperty(Color.prototype, 'a', {
+
+    get: function() {
+      return this.__state.a;
+    },
+
+    set: function(v) {
+      this.__state.a = v;
+    }
+
+  });
+
+  Object.defineProperty(Color.prototype, 'hex', {
+
+    get: function() {
+
+      if (!this.__state.space !== 'HEX') {
+        this.__state.hex = math.rgb_to_hex(this.r, this.g, this.b);
+      }
+
+      return this.__state.hex;
+
+    },
+
+    set: function(v) {
+
+      this.__state.space = 'HEX';
+      this.__state.hex = v;
+
+    }
+
+  });
+
+  function defineRGBComponent(target, component, componentHexIndex) {
+
+    Object.defineProperty(target, component, {
+
+      get: function() {
+
+        if (this.__state.space === 'RGB') {
+          return this.__state[component];
+        }
+
+        recalculateRGB(this, component, componentHexIndex);
+
+        return this.__state[component];
+
+      },
+
+      set: function(v) {
+
+        if (this.__state.space !== 'RGB') {
+          recalculateRGB(this, component, componentHexIndex);
+          this.__state.space = 'RGB';
+        }
+
+        this.__state[component] = v;
+
+      }
+
+    });
+
+  }
+
+  function defineHSVComponent(target, component) {
+
+    Object.defineProperty(target, component, {
+
+      get: function() {
+
+        if (this.__state.space === 'HSV')
+          return this.__state[component];
+
+        recalculateHSV(this);
+
+        return this.__state[component];
+
+      },
+
+      set: function(v) {
+
+        if (this.__state.space !== 'HSV') {
+          recalculateHSV(this);
+          this.__state.space = 'HSV';
+        }
+
+        this.__state[component] = v;
+
+      }
+
+    });
+
+  }
+
+  function recalculateRGB(color, component, componentHexIndex) {
+
+    if (color.__state.space === 'HEX') {
+
+      color.__state[component] = math.component_from_hex(color.__state.hex, componentHexIndex);
+
+    } else if (color.__state.space === 'HSV') {
+
+      common.extend(color.__state, math.hsv_to_rgb(color.__state.h, color.__state.s, color.__state.v));
+
+    } else {
+
+      throw 'Corrupted color state';
+
+    }
+
+  }
+
+  function recalculateHSV(color) {
+
+    var result = math.rgb_to_hsv(color.r, color.g, color.b);
+
+    common.extend(color.__state,
+        {
+          s: result.s,
+          v: result.v
+        }
+    );
+
+    if (!common.isNaN(result.h)) {
+      color.__state.h = result.h;
+    } else if (common.isUndefined(color.__state.h)) {
+      color.__state.h = 0;
+    }
+
+  }
+
+  return Color;
+
+})(dat.color.interpret,
+dat.color.math = (function () {
+
+  var tmpComponent;
+
+  return {
+
+    hsv_to_rgb: function(h, s, v) {
+
+      var hi = Math.floor(h / 60) % 6;
+
+      var f = h / 60 - Math.floor(h / 60);
+      var p = v * (1.0 - s);
+      var q = v * (1.0 - (f * s));
+      var t = v * (1.0 - ((1.0 - f) * s));
+      var c = [
+        [v, t, p],
+        [q, v, p],
+        [p, v, t],
+        [p, q, v],
+        [t, p, v],
+        [v, p, q]
+      ][hi];
+
+      return {
+        r: c[0] * 255,
+        g: c[1] * 255,
+        b: c[2] * 255
+      };
+
+    },
+
+    rgb_to_hsv: function(r, g, b) {
+
+      var min = Math.min(r, g, b),
+          max = Math.max(r, g, b),
+          delta = max - min,
+          h, s;
+
+      if (max != 0) {
+        s = delta / max;
+      } else {
+        return {
+          h: NaN,
+          s: 0,
+          v: 0
+        };
+      }
+
+      if (r == max) {
+        h = (g - b) / delta;
+      } else if (g == max) {
+        h = 2 + (b - r) / delta;
+      } else {
+        h = 4 + (r - g) / delta;
+      }
+      h /= 6;
+      if (h < 0) {
+        h += 1;
+      }
+
+      return {
+        h: h * 360,
+        s: s,
+        v: max / 255
+      };
+    },
+
+    rgb_to_hex: function(r, g, b) {
+      var hex = this.hex_with_component(0, 2, r);
+      hex = this.hex_with_component(hex, 1, g);
+      hex = this.hex_with_component(hex, 0, b);
+      return hex;
+    },
+
+    component_from_hex: function(hex, componentIndex) {
+      return (hex >> (componentIndex * 8)) & 0xFF;
+    },
+
+    hex_with_component: function(hex, componentIndex, value) {
+      return value << (tmpComponent = componentIndex * 8) | (hex & ~ (0xFF << tmpComponent));
+    }
+
+  }
+
+})(),
+dat.color.toString,
+dat.utils.common),
+dat.color.interpret,
+dat.utils.common),
+dat.utils.requestAnimationFrame = (function () {
+
+  /**
+   * requirejs version of Paul Irish's RequestAnimationFrame
+   * http://paulirish.com/2011/requestanimationframe-for-smart-animating/
    */
 
-  var EffectComposer = function () {
-  		function EffectComposer(renderer, depthTexture, stencilBuffer) {
-  				classCallCheck(this, EffectComposer);
-
-
-  				if (depthTexture === undefined) {
-  						depthTexture = false;
-  				}
-  				if (stencilBuffer === undefined) {
-  						stencilBuffer = false;
-  				}
-
-  				/**
-       * The renderer.
-       *
-       * @property renderer
-       * @type WebGLRenderer
-       */
-
-  				this.renderer = renderer !== undefined ? renderer : new THREE.WebGLRenderer();
-
-  				this.renderer.autoClear = false;
-  				this.renderer.state.setDepthWrite(false);
-
-  				/**
-       * The read buffer.
-       *
-       * Reading from and writing to the same render target should be avoided.
-       * Therefore, two seperate, yet identical buffers are used.
-       *
-       * @property readBuffer
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				this.readBuffer = this.createBuffer(stencilBuffer);
-
-  				this.readBuffer.texture.generateMipmaps = false;
-
-  				/**
-       * The write buffer.
-       *
-       * @property writeBuffer
-       * @type WebGLRenderTarget
-       * @private
-       */
-
-  				this.writeBuffer = this.readBuffer.clone();
-
-  				if (depthTexture) {
-
-  						this.readBuffer.depthTexture = this.writeBuffer.depthTexture = new THREE.DepthTexture();
-  				}
-
-  				/**
-       * A copy pass used for copying masked scenes.
-       *
-       * @property copyPass
-       * @type ShaderPass
-       * @private
-       */
-
-  				this.copyPass = new ShaderPass(new CopyMaterial());
-
-  				/**
-       * The render passes.
-       *
-       * @property passes
-       * @type Array
-       * @private
-       */
-
-  				this.passes = [];
-  		}
-
-  		/**
-     * Creates a new render target by replicating the renderer's canvas.
-     *
-     * @method createBuffer
-     * @param {Boolean} stencilBuffer - Whether the render target should have a stencil buffer.
-     * @return {WebGLRenderTarget} A fresh render target that equals the renderer's canvas.
-     */
-
-  		createClass(EffectComposer, [{
-  				key: "createBuffer",
-  				value: function createBuffer(stencilBuffer) {
-
-  						var size = this.renderer.getSize();
-  						var alpha = this.renderer.context.getContextAttributes().alpha;
-
-  						return new THREE.WebGLRenderTarget(size.width, size.height, {
-  								minFilter: THREE.LinearFilter,
-  								magFilter: THREE.LinearFilter,
-  								format: alpha ? THREE.RGBAFormat : THREE.RGBFormat,
-  								stencilBuffer: stencilBuffer
-  						});
-  				}
-
-  				/**
-       * Adds a pass, optionally at a specific index.
-       *
-       * @method addPass
-       * @param {Pass} pass - A new pass.
-       * @param {Number} [index] - An index at which the pass should be inserted.
-       */
-
-  		}, {
-  				key: "addPass",
-  				value: function addPass(pass, index) {
-
-  						pass.initialise(this.renderer, this.renderer.context.getContextAttributes().alpha);
-
-  						if (index !== undefined) {
-
-  								this.passes.splice(index, 0, pass);
-  						} else {
-
-  								this.passes.push(pass);
-  						}
-  				}
-
-  				/**
-       * Removes a pass.
-       *
-       * @method removePass
-       * @param {Pass} pass - The pass.
-       */
-
-  		}, {
-  				key: "removePass",
-  				value: function removePass(pass) {
-
-  						this.passes.splice(this.passes.indexOf(pass), 1);
-  				}
-
-  				/**
-       * Renders all enabled passes in the order in which they were added.
-       *
-       * @method render
-       * @param {Number} delta - The time between the last frame and the current one in seconds.
-       */
-
-  		}, {
-  				key: "render",
-  				value: function render(delta) {
-
-  						var readBuffer = this.readBuffer;
-  						var writeBuffer = this.writeBuffer;
-
-  						var maskActive = false;
-  						var i = void 0,
-  						    l = void 0,
-  						    pass = void 0,
-  						    buffer = void 0;
-  						var ctx = void 0,
-  						    state = void 0;
-
-  						for (i = 0, l = this.passes.length; i < l; ++i) {
-
-  								pass = this.passes[i];
-
-  								if (pass.enabled) {
-
-  										pass.render(this.renderer, readBuffer, writeBuffer, delta, maskActive);
-
-  										if (pass.needsSwap) {
-
-  												if (maskActive) {
-
-  														ctx = this.renderer.context;
-  														state = this.renderer.state;
-  														state.setStencilFunc(ctx.NOTEQUAL, 1, 0xffffffff);
-  														this.copyPass.render(this.renderer, readBuffer, writeBuffer);
-  														state.setStencilFunc(ctx.EQUAL, 1, 0xffffffff);
-  												}
-
-  												buffer = readBuffer;
-  												readBuffer = writeBuffer;
-  												writeBuffer = buffer;
-  										}
-
-  										if (pass instanceof MaskPass) {
-
-  												maskActive = true;
-  										} else if (pass instanceof ClearMaskPass) {
-
-  												maskActive = false;
-  										}
-  								}
-  						}
-  				}
-
-  				/**
-       * Sets the size of the buffers and the renderer's output canvas.
-       *
-       * Every pass will be informed of the new size. It's up to each pass how that
-       * information is used.
-       *
-       * If no width or height is specified, the render targets and passes will be
-       * updated with the current size of the renderer.
-       *
-       * @method setSize
-       * @param {Number} [width] - The width.
-       * @param {Number} [height] - The height.
-       */
-
-  		}, {
-  				key: "setSize",
-  				value: function setSize(width, height) {
-
-  						var i = void 0,
-  						    l = void 0;
-  						var size = void 0;
-
-  						if (width === undefined || height === undefined) {
-
-  								size = this.renderer.getSize();
-  								width = size.width;
-  								height = size.height;
-  						}
-
-  						this.renderer.setSize(width, height);
-  						this.readBuffer.setSize(width, height);
-  						this.writeBuffer.setSize(width, height);
-
-  						for (i = 0, l = this.passes.length; i < l; ++i) {
-
-  								this.passes[i].setSize(width, height);
-  						}
-  				}
-
-  				/**
-       * Resets this composer by deleting all passes and creating new buffers.
-       *
-       * @method reset
-       * @param {WebGLRenderTarget} [renderTarget] - A new render target to use. If none is provided, the settings of the renderer will be used.
-       */
-
-  		}, {
-  				key: "reset",
-  				value: function reset(renderTarget) {
-
-  						this.dispose(renderTarget === undefined ? this.createBuffer() : renderTarget);
-  				}
-
-  				/**
-       * Destroys all passes and render targets.
-       *
-       * This method deallocates all render targets, textures and materials created
-       * by the passes. It also deletes this composer's frame buffers.
-       *
-       * Note: the reset method uses the dispose method internally.
-       *
-       * @method dispose
-       * @param {WebGLRenderTarget} [renderTarget] - A new render target. If none is provided, the composer will become inoperative.
-       */
-
-  		}, {
-  				key: "dispose",
-  				value: function dispose(renderTarget) {
-
-  						this.readBuffer.dispose();
-  						this.writeBuffer.dispose();
-
-  						this.readBuffer = this.writeBuffer = null;
-
-  						while (this.passes.length > 0) {
-
-  								this.passes.pop().dispose();
-  						}
-
-  						if (renderTarget !== undefined) {
-
-  								// Reanimate.
-  								this.readBuffer = renderTarget;
-  								this.writeBuffer = this.readBuffer.clone();
-  						} else {
-
-  								this.copyPass.dispose();
-  						}
-  				}
-  		}]);
-  		return EffectComposer;
-  }();
-
-  exports.EffectComposer = EffectComposer;
-  exports.BloomPass = BloomPass;
-  exports.BokehPass = BokehPass;
-  exports.Bokeh2Pass = Bokeh2Pass;
-  exports.ClearMaskPass = ClearMaskPass;
-  exports.DotScreenPass = DotScreenPass;
-  exports.FilmPass = FilmPass;
-  exports.GlitchPass = GlitchPass;
-  exports.GodRaysPass = GodRaysPass;
-  exports.MaskPass = MaskPass;
-  exports.Pass = Pass;
-  exports.RenderPass = RenderPass;
-  exports.SavePass = SavePass;
-  exports.SMAAPass = SMAAPass;
-  exports.ShaderPass = ShaderPass;
-  exports.ToneMappingPass = ToneMappingPass;
-  exports.AdaptiveLuminosityMaterial = AdaptiveLuminosityMaterial;
-  exports.BokehMaterial = BokehMaterial;
-  exports.Bokeh2Material = Bokeh2Material;
-  exports.CombineMaterial = CombineMaterial;
-  exports.ConvolutionMaterial = ConvolutionMaterial;
-  exports.CopyMaterial = CopyMaterial;
-  exports.DotScreenMaterial = DotScreenMaterial;
-  exports.FilmMaterial = FilmMaterial;
-  exports.GlitchMaterial = GlitchMaterial;
-  exports.GodRaysMaterial = GodRaysMaterial;
-  exports.LuminosityMaterial = LuminosityMaterial;
-  exports.SMAABlendMaterial = SMAABlendMaterial;
-  exports.SMAAColorEdgesMaterial = SMAAColorEdgesMaterial;
-  exports.SMAAWeightsMaterial = SMAAWeightsMaterial;
-  exports.ToneMappingMaterial = ToneMappingMaterial;
-
-  Object.defineProperty(exports, '__esModule', { value: true });
-
-})));
-},{"three":3}],3:[function(require,module,exports){
+  return window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame ||
+      window.oRequestAnimationFrame ||
+      window.msRequestAnimationFrame ||
+      function(callback, element) {
+
+        window.setTimeout(callback, 1000 / 60);
+
+      };
+})(),
+dat.dom.CenteredDiv = (function (dom, common) {
+
+
+  var CenteredDiv = function() {
+
+    this.backgroundElement = document.createElement('div');
+    common.extend(this.backgroundElement.style, {
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      top: 0,
+      left: 0,
+      display: 'none',
+      zIndex: '1000',
+      opacity: 0,
+      WebkitTransition: 'opacity 0.2s linear'
+    });
+
+    dom.makeFullscreen(this.backgroundElement);
+    this.backgroundElement.style.position = 'fixed';
+
+    this.domElement = document.createElement('div');
+    common.extend(this.domElement.style, {
+      position: 'fixed',
+      display: 'none',
+      zIndex: '1001',
+      opacity: 0,
+      WebkitTransition: '-webkit-transform 0.2s ease-out, opacity 0.2s linear'
+    });
+
+
+    document.body.appendChild(this.backgroundElement);
+    document.body.appendChild(this.domElement);
+
+    var _this = this;
+    dom.bind(this.backgroundElement, 'click', function() {
+      _this.hide();
+    });
+
+
+  };
+
+  CenteredDiv.prototype.show = function() {
+
+    var _this = this;
+    
+
+
+    this.backgroundElement.style.display = 'block';
+
+    this.domElement.style.display = 'block';
+    this.domElement.style.opacity = 0;
+//    this.domElement.style.top = '52%';
+    this.domElement.style.webkitTransform = 'scale(1.1)';
+
+    this.layout();
+
+    common.defer(function() {
+      _this.backgroundElement.style.opacity = 1;
+      _this.domElement.style.opacity = 1;
+      _this.domElement.style.webkitTransform = 'scale(1)';
+    });
+
+  };
+
+  CenteredDiv.prototype.hide = function() {
+
+    var _this = this;
+
+    var hide = function() {
+
+      _this.domElement.style.display = 'none';
+      _this.backgroundElement.style.display = 'none';
+
+      dom.unbind(_this.domElement, 'webkitTransitionEnd', hide);
+      dom.unbind(_this.domElement, 'transitionend', hide);
+      dom.unbind(_this.domElement, 'oTransitionEnd', hide);
+
+    };
+
+    dom.bind(this.domElement, 'webkitTransitionEnd', hide);
+    dom.bind(this.domElement, 'transitionend', hide);
+    dom.bind(this.domElement, 'oTransitionEnd', hide);
+
+    this.backgroundElement.style.opacity = 0;
+//    this.domElement.style.top = '48%';
+    this.domElement.style.opacity = 0;
+    this.domElement.style.webkitTransform = 'scale(1.1)';
+
+  };
+
+  CenteredDiv.prototype.layout = function() {
+    this.domElement.style.left = window.innerWidth/2 - dom.getWidth(this.domElement) / 2 + 'px';
+    this.domElement.style.top = window.innerHeight/2 - dom.getHeight(this.domElement) / 2 + 'px';
+  };
+  
+  function lockScroll(e) {
+    console.log(e);
+  }
+
+  return CenteredDiv;
+
+})(dat.dom.dom,
+dat.utils.common),
+dat.dom.dom,
+dat.utils.common);
+},{}],8:[function(require,module,exports){
+// stats.js - http://github.com/mrdoob/stats.js
+var Stats=function(){function h(a){c.appendChild(a.dom);return a}function k(a){for(var d=0;d<c.children.length;d++)c.children[d].style.display=d===a?"block":"none";l=a}var l=0,c=document.createElement("div");c.style.cssText="position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000";c.addEventListener("click",function(a){a.preventDefault();k(++l%c.children.length)},!1);var g=(performance||Date).now(),e=g,a=0,r=h(new Stats.Panel("FPS","#0ff","#002")),f=h(new Stats.Panel("MS","#0f0","#020"));
+if(self.performance&&self.performance.memory)var t=h(new Stats.Panel("MB","#f08","#201"));k(0);return{REVISION:16,dom:c,addPanel:h,showPanel:k,begin:function(){g=(performance||Date).now()},end:function(){a++;var c=(performance||Date).now();f.update(c-g,200);if(c>e+1E3&&(r.update(1E3*a/(c-e),100),e=c,a=0,t)){var d=performance.memory;t.update(d.usedJSHeapSize/1048576,d.jsHeapSizeLimit/1048576)}return c},update:function(){g=this.end()},domElement:c,setMode:k}};
+Stats.Panel=function(h,k,l){var c=Infinity,g=0,e=Math.round,a=e(window.devicePixelRatio||1),r=80*a,f=48*a,t=3*a,u=2*a,d=3*a,m=15*a,n=74*a,p=30*a,q=document.createElement("canvas");q.width=r;q.height=f;q.style.cssText="width:80px;height:48px";var b=q.getContext("2d");b.font="bold "+9*a+"px Helvetica,Arial,sans-serif";b.textBaseline="top";b.fillStyle=l;b.fillRect(0,0,r,f);b.fillStyle=k;b.fillText(h,t,u);b.fillRect(d,m,n,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d,m,n,p);return{dom:q,update:function(f,
+v){c=Math.min(c,f);g=Math.max(g,f);b.fillStyle=l;b.globalAlpha=1;b.fillRect(0,0,r,m);b.fillStyle=k;b.fillText(e(f)+" "+h+" ("+e(c)+"-"+e(g)+")",t,u);b.drawImage(q,d+a,m,n-a,p,d,m,n-a,p);b.fillRect(d+n-a,m,a,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d+n-a,m,a,e((1-f/v)*p))}}};"object"===typeof module&&(module.exports=Stats);
+
+},{}],9:[function(require,module,exports){
+module.exports = function(THREE) {
+	var MOUSE = THREE.MOUSE
+	if (!MOUSE)
+		MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2 };
+
+	/**
+	 * @author qiao / https://github.com/qiao
+	 * @author mrdoob / http://mrdoob.com
+	 * @author alteredq / http://alteredqualia.com/
+	 * @author WestLangley / http://github.com/WestLangley
+	 * @author erich666 / http://erichaines.com
+	 */
+	/*global THREE, console */
+
+	function OrbitConstraint ( object ) {
+
+		this.object = object;
+
+		// "target" sets the location of focus, where the object orbits around
+		// and where it pans with respect to.
+		this.target = new THREE.Vector3();
+
+		// Limits to how far you can dolly in and out ( PerspectiveCamera only )
+		this.minDistance = 0;
+		this.maxDistance = Infinity;
+
+		// Limits to how far you can zoom in and out ( OrthographicCamera only )
+		this.minZoom = 0;
+		this.maxZoom = Infinity;
+
+		// How far you can orbit vertically, upper and lower limits.
+		// Range is 0 to Math.PI radians.
+		this.minPolarAngle = 0; // radians
+		this.maxPolarAngle = Math.PI; // radians
+
+		// How far you can orbit horizontally, upper and lower limits.
+		// If set, must be a sub-interval of the interval [ - Math.PI, Math.PI ].
+		this.minAzimuthAngle = - Infinity; // radians
+		this.maxAzimuthAngle = Infinity; // radians
+
+		// Set to true to enable damping (inertia)
+		// If damping is enabled, you must call controls.update() in your animation loop
+		this.enableDamping = false;
+		this.dampingFactor = 0.25;
+
+		////////////
+		// internals
+
+		var scope = this;
+
+		var EPS = 0.000001;
+
+		// Current position in spherical coordinate system.
+		var theta;
+		var phi;
+
+		// Pending changes
+		var phiDelta = 0;
+		var thetaDelta = 0;
+		var scale = 1;
+		var panOffset = new THREE.Vector3();
+		var zoomChanged = false;
+
+		// API
+
+		this.getPolarAngle = function () {
+
+			return phi;
+
+		};
+
+		this.getAzimuthalAngle = function () {
+
+			return theta;
+
+		};
+
+		this.rotateLeft = function ( angle ) {
+
+			thetaDelta -= angle;
+
+		};
+
+		this.rotateUp = function ( angle ) {
+
+			phiDelta -= angle;
+
+		};
+
+		// pass in distance in world space to move left
+		this.panLeft = function() {
+
+			var v = new THREE.Vector3();
+
+			return function panLeft ( distance ) {
+
+				var te = this.object.matrix.elements;
+
+				// get X column of matrix
+				v.set( te[ 0 ], te[ 1 ], te[ 2 ] );
+				v.multiplyScalar( - distance );
+
+				panOffset.add( v );
+
+			};
+
+		}();
+
+		// pass in distance in world space to move up
+		this.panUp = function() {
+
+			var v = new THREE.Vector3();
+
+			return function panUp ( distance ) {
+
+				var te = this.object.matrix.elements;
+
+				// get Y column of matrix
+				v.set( te[ 4 ], te[ 5 ], te[ 6 ] );
+				v.multiplyScalar( distance );
+
+				panOffset.add( v );
+
+			};
+
+		}();
+
+		// pass in x,y of change desired in pixel space,
+		// right and down are positive
+		this.pan = function ( deltaX, deltaY, screenWidth, screenHeight ) {
+
+			if ( scope.object instanceof THREE.PerspectiveCamera ) {
+
+				// perspective
+				var position = scope.object.position;
+				var offset = position.clone().sub( scope.target );
+				var targetDistance = offset.length();
+
+				// half of the fov is center to top of screen
+				targetDistance *= Math.tan( ( scope.object.fov / 2 ) * Math.PI / 180.0 );
+
+				// we actually don't use screenWidth, since perspective camera is fixed to screen height
+				scope.panLeft( 2 * deltaX * targetDistance / screenHeight );
+				scope.panUp( 2 * deltaY * targetDistance / screenHeight );
+
+			} else if ( scope.object instanceof THREE.OrthographicCamera ) {
+
+				// orthographic
+				scope.panLeft( deltaX * ( scope.object.right - scope.object.left ) / screenWidth );
+				scope.panUp( deltaY * ( scope.object.top - scope.object.bottom ) / screenHeight );
+
+			} else {
+
+				// camera neither orthographic or perspective
+				console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - pan disabled.' );
+
+			}
+
+		};
+
+		this.dollyIn = function ( dollyScale ) {
+
+			if ( scope.object instanceof THREE.PerspectiveCamera ) {
+
+				scale /= dollyScale;
+
+			} else if ( scope.object instanceof THREE.OrthographicCamera ) {
+
+				scope.object.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, this.object.zoom * dollyScale ) );
+				scope.object.updateProjectionMatrix();
+				zoomChanged = true;
+
+			} else {
+
+				console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.' );
+
+			}
+
+		};
+
+		this.dollyOut = function ( dollyScale ) {
+
+			if ( scope.object instanceof THREE.PerspectiveCamera ) {
+
+				scale *= dollyScale;
+
+			} else if ( scope.object instanceof THREE.OrthographicCamera ) {
+
+				scope.object.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, this.object.zoom / dollyScale ) );
+				scope.object.updateProjectionMatrix();
+				zoomChanged = true;
+
+			} else {
+
+				console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.' );
+
+			}
+
+		};
+
+		this.update = function() {
+
+			var offset = new THREE.Vector3();
+
+			// so camera.up is the orbit axis
+			var quat = new THREE.Quaternion().setFromUnitVectors( object.up, new THREE.Vector3( 0, 1, 0 ) );
+			var quatInverse = quat.clone().inverse();
+
+			var lastPosition = new THREE.Vector3();
+			var lastQuaternion = new THREE.Quaternion();
+
+			return function () {
+
+				var position = this.object.position;
+
+				offset.copy( position ).sub( this.target );
+
+				// rotate offset to "y-axis-is-up" space
+				offset.applyQuaternion( quat );
+
+				// angle from z-axis around y-axis
+
+				theta = Math.atan2( offset.x, offset.z );
+
+				// angle from y-axis
+
+				phi = Math.atan2( Math.sqrt( offset.x * offset.x + offset.z * offset.z ), offset.y );
+
+				theta += thetaDelta;
+				phi += phiDelta;
+
+				// restrict theta to be between desired limits
+				theta = Math.max( this.minAzimuthAngle, Math.min( this.maxAzimuthAngle, theta ) );
+
+				// restrict phi to be between desired limits
+				phi = Math.max( this.minPolarAngle, Math.min( this.maxPolarAngle, phi ) );
+
+				// restrict phi to be betwee EPS and PI-EPS
+				phi = Math.max( EPS, Math.min( Math.PI - EPS, phi ) );
+
+				var radius = offset.length() * scale;
+
+				// restrict radius to be between desired limits
+				radius = Math.max( this.minDistance, Math.min( this.maxDistance, radius ) );
+
+				// move target to panned location
+				this.target.add( panOffset );
+
+				offset.x = radius * Math.sin( phi ) * Math.sin( theta );
+				offset.y = radius * Math.cos( phi );
+				offset.z = radius * Math.sin( phi ) * Math.cos( theta );
+
+				// rotate offset back to "camera-up-vector-is-up" space
+				offset.applyQuaternion( quatInverse );
+
+				position.copy( this.target ).add( offset );
+
+				this.object.lookAt( this.target );
+
+				if ( this.enableDamping === true ) {
+
+					thetaDelta *= ( 1 - this.dampingFactor );
+					phiDelta *= ( 1 - this.dampingFactor );
+
+				} else {
+
+					thetaDelta = 0;
+					phiDelta = 0;
+
+				}
+
+				scale = 1;
+				panOffset.set( 0, 0, 0 );
+
+				// update condition is:
+				// min(camera displacement, camera rotation in radians)^2 > EPS
+				// using small-angle approximation cos(x/2) = 1 - x^2 / 8
+
+				if ( zoomChanged ||
+					 lastPosition.distanceToSquared( this.object.position ) > EPS ||
+					8 * ( 1 - lastQuaternion.dot( this.object.quaternion ) ) > EPS ) {
+
+					lastPosition.copy( this.object.position );
+					lastQuaternion.copy( this.object.quaternion );
+					zoomChanged = false;
+
+					return true;
+
+				}
+
+				return false;
+
+			};
+
+		}();
+
+	};
+
+
+	// This set of controls performs orbiting, dollying (zooming), and panning. It maintains
+	// the "up" direction as +Y, unlike the TrackballControls. Touch on tablet and phones is
+	// supported.
+	//
+	//    Orbit - left mouse / touch: one finger move
+	//    Zoom - middle mouse, or mousewheel / touch: two finger spread or squish
+	//    Pan - right mouse, or arrow keys / touch: three finter swipe
+
+	function OrbitControls ( object, domElement ) {
+
+		var constraint = new OrbitConstraint( object );
+
+		this.domElement = ( domElement !== undefined ) ? domElement : document;
+
+		// API
+
+		Object.defineProperty( this, 'constraint', {
+
+			get: function() {
+
+				return constraint;
+
+			}
+
+		} );
+
+		this.getPolarAngle = function () {
+
+			return constraint.getPolarAngle();
+
+		};
+
+		this.getAzimuthalAngle = function () {
+
+			return constraint.getAzimuthalAngle();
+
+		};
+
+		// Set to false to disable this control
+		this.enabled = true;
+
+		// center is old, deprecated; use "target" instead
+		this.center = this.target;
+
+		// This option actually enables dollying in and out; left as "zoom" for
+		// backwards compatibility.
+		// Set to false to disable zooming
+		this.enableZoom = true;
+		this.zoomSpeed = 1.0;
+
+		// Set to false to disable rotating
+		this.enableRotate = true;
+		this.rotateSpeed = 1.0;
+
+		// Set to false to disable panning
+		this.enablePan = true;
+		this.keyPanSpeed = 7.0;	// pixels moved per arrow key push
+
+		// Set to true to automatically rotate around the target
+		// If auto-rotate is enabled, you must call controls.update() in your animation loop
+		this.autoRotate = false;
+		this.autoRotateSpeed = 2.0; // 30 seconds per round when fps is 60
+
+		// Set to false to disable use of the keys
+		this.enableKeys = true;
+
+		// The four arrow keys
+		this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+
+		// Mouse buttons
+		this.mouseButtons = { ORBIT: THREE.MOUSE.LEFT, ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.RIGHT };
+
+		////////////
+		// internals
+
+		var scope = this;
+
+		var rotateStart = new THREE.Vector2();
+		var rotateEnd = new THREE.Vector2();
+		var rotateDelta = new THREE.Vector2();
+
+		var panStart = new THREE.Vector2();
+		var panEnd = new THREE.Vector2();
+		var panDelta = new THREE.Vector2();
+
+		var dollyStart = new THREE.Vector2();
+		var dollyEnd = new THREE.Vector2();
+		var dollyDelta = new THREE.Vector2();
+
+		var STATE = { NONE : - 1, ROTATE : 0, DOLLY : 1, PAN : 2, TOUCH_ROTATE : 3, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
+
+		var state = STATE.NONE;
+
+		// for reset
+
+		this.target0 = this.target.clone();
+		this.position0 = this.object.position.clone();
+		this.zoom0 = this.object.zoom;
+
+		// events
+
+		var changeEvent = { type: 'change' };
+		var startEvent = { type: 'start' };
+		var endEvent = { type: 'end' };
+
+		// pass in x,y of change desired in pixel space,
+		// right and down are positive
+		function pan( deltaX, deltaY ) {
+
+			var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+
+			constraint.pan( deltaX, deltaY, element.clientWidth, element.clientHeight );
+
+		}
+
+		this.update = function () {
+
+			if ( this.autoRotate && state === STATE.NONE ) {
+
+				constraint.rotateLeft( getAutoRotationAngle() );
+
+			}
+
+			if ( constraint.update() === true ) {
+
+				this.dispatchEvent( changeEvent );
+
+			}
+
+		};
+
+		this.reset = function () {
+
+			state = STATE.NONE;
+
+			this.target.copy( this.target0 );
+			this.object.position.copy( this.position0 );
+			this.object.zoom = this.zoom0;
+
+			this.object.updateProjectionMatrix();
+			this.dispatchEvent( changeEvent );
+
+			this.update();
+
+		};
+
+		function getAutoRotationAngle() {
+
+			return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
+
+		}
+
+		function getZoomScale() {
+
+			return Math.pow( 0.95, scope.zoomSpeed );
+
+		}
+
+		function onMouseDown( event ) {
+
+			if ( scope.enabled === false ) return;
+
+			event.preventDefault();
+
+			if ( event.button === scope.mouseButtons.ORBIT ) {
+
+				if ( scope.enableRotate === false ) return;
+
+				state = STATE.ROTATE;
+
+				rotateStart.set( event.clientX, event.clientY );
+
+			} else if ( event.button === scope.mouseButtons.ZOOM ) {
+
+				if ( scope.enableZoom === false ) return;
+
+				state = STATE.DOLLY;
+
+				dollyStart.set( event.clientX, event.clientY );
+
+			} else if ( event.button === scope.mouseButtons.PAN ) {
+
+				if ( scope.enablePan === false ) return;
+
+				state = STATE.PAN;
+
+				panStart.set( event.clientX, event.clientY );
+
+			}
+
+			if ( state !== STATE.NONE ) {
+
+				document.addEventListener( 'mousemove', onMouseMove, false );
+				document.addEventListener( 'mouseup', onMouseUp, false );
+				scope.dispatchEvent( startEvent );
+
+			}
+
+		}
+
+		function onMouseMove( event ) {
+
+			if ( scope.enabled === false ) return;
+
+			event.preventDefault();
+
+			var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+
+			if ( state === STATE.ROTATE ) {
+
+				if ( scope.enableRotate === false ) return;
+
+				rotateEnd.set( event.clientX, event.clientY );
+				rotateDelta.subVectors( rotateEnd, rotateStart );
+
+				// rotating across whole screen goes 360 degrees around
+				constraint.rotateLeft( 2 * Math.PI * rotateDelta.x / element.clientWidth * scope.rotateSpeed );
+
+				// rotating up and down along whole screen attempts to go 360, but limited to 180
+				constraint.rotateUp( 2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed );
+
+				rotateStart.copy( rotateEnd );
+
+			} else if ( state === STATE.DOLLY ) {
+
+				if ( scope.enableZoom === false ) return;
+
+				dollyEnd.set( event.clientX, event.clientY );
+				dollyDelta.subVectors( dollyEnd, dollyStart );
+
+				if ( dollyDelta.y > 0 ) {
+
+					constraint.dollyIn( getZoomScale() );
+
+				} else if ( dollyDelta.y < 0 ) {
+
+					constraint.dollyOut( getZoomScale() );
+
+				}
+
+				dollyStart.copy( dollyEnd );
+
+			} else if ( state === STATE.PAN ) {
+
+				if ( scope.enablePan === false ) return;
+
+				panEnd.set( event.clientX, event.clientY );
+				panDelta.subVectors( panEnd, panStart );
+
+				pan( panDelta.x, panDelta.y );
+
+				panStart.copy( panEnd );
+
+			}
+
+			if ( state !== STATE.NONE ) scope.update();
+
+		}
+
+		function onMouseUp( /* event */ ) {
+
+			if ( scope.enabled === false ) return;
+
+			document.removeEventListener( 'mousemove', onMouseMove, false );
+			document.removeEventListener( 'mouseup', onMouseUp, false );
+			scope.dispatchEvent( endEvent );
+			state = STATE.NONE;
+
+		}
+
+		function onMouseWheel( event ) {
+
+			if ( scope.enabled === false || scope.enableZoom === false || state !== STATE.NONE ) return;
+
+			event.preventDefault();
+			event.stopPropagation();
+
+			var delta = 0;
+
+			if ( event.wheelDelta !== undefined ) {
+
+				// WebKit / Opera / Explorer 9
+
+				delta = event.wheelDelta;
+
+			} else if ( event.detail !== undefined ) {
+
+				// Firefox
+
+				delta = - event.detail;
+
+			}
+
+			if ( delta > 0 ) {
+
+				constraint.dollyOut( getZoomScale() );
+
+			} else if ( delta < 0 ) {
+
+				constraint.dollyIn( getZoomScale() );
+
+			}
+
+			scope.update();
+			scope.dispatchEvent( startEvent );
+			scope.dispatchEvent( endEvent );
+
+		}
+
+		function onKeyDown( event ) {
+
+			if ( scope.enabled === false || scope.enableKeys === false || scope.enablePan === false ) return;
+
+			switch ( event.keyCode ) {
+
+				case scope.keys.UP:
+					pan( 0, scope.keyPanSpeed );
+					scope.update();
+					break;
+
+				case scope.keys.BOTTOM:
+					pan( 0, - scope.keyPanSpeed );
+					scope.update();
+					break;
+
+				case scope.keys.LEFT:
+					pan( scope.keyPanSpeed, 0 );
+					scope.update();
+					break;
+
+				case scope.keys.RIGHT:
+					pan( - scope.keyPanSpeed, 0 );
+					scope.update();
+					break;
+
+			}
+
+		}
+
+		function touchstart( event ) {
+
+			if ( scope.enabled === false ) return;
+
+			switch ( event.touches.length ) {
+
+				case 1:	// one-fingered touch: rotate
+
+					if ( scope.enableRotate === false ) return;
+
+					state = STATE.TOUCH_ROTATE;
+
+					rotateStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+					break;
+
+				case 2:	// two-fingered touch: dolly
+
+					if ( scope.enableZoom === false ) return;
+
+					state = STATE.TOUCH_DOLLY;
+
+					var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
+					var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
+					var distance = Math.sqrt( dx * dx + dy * dy );
+					dollyStart.set( 0, distance );
+					break;
+
+				case 3: // three-fingered touch: pan
+
+					if ( scope.enablePan === false ) return;
+
+					state = STATE.TOUCH_PAN;
+
+					panStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+					break;
+
+				default:
+
+					state = STATE.NONE;
+
+			}
+
+			if ( state !== STATE.NONE ) scope.dispatchEvent( startEvent );
+
+		}
+
+		function touchmove( event ) {
+
+			if ( scope.enabled === false ) return;
+
+			event.preventDefault();
+			event.stopPropagation();
+
+			var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+
+			switch ( event.touches.length ) {
+
+				case 1: // one-fingered touch: rotate
+
+					if ( scope.enableRotate === false ) return;
+					if ( state !== STATE.TOUCH_ROTATE ) return;
+
+					rotateEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+					rotateDelta.subVectors( rotateEnd, rotateStart );
+
+					// rotating across whole screen goes 360 degrees around
+					constraint.rotateLeft( 2 * Math.PI * rotateDelta.x / element.clientWidth * scope.rotateSpeed );
+					// rotating up and down along whole screen attempts to go 360, but limited to 180
+					constraint.rotateUp( 2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed );
+
+					rotateStart.copy( rotateEnd );
+
+					scope.update();
+					break;
+
+				case 2: // two-fingered touch: dolly
+
+					if ( scope.enableZoom === false ) return;
+					if ( state !== STATE.TOUCH_DOLLY ) return;
+
+					var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
+					var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
+					var distance = Math.sqrt( dx * dx + dy * dy );
+
+					dollyEnd.set( 0, distance );
+					dollyDelta.subVectors( dollyEnd, dollyStart );
+
+					if ( dollyDelta.y > 0 ) {
+
+						constraint.dollyOut( getZoomScale() );
+
+					} else if ( dollyDelta.y < 0 ) {
+
+						constraint.dollyIn( getZoomScale() );
+
+					}
+
+					dollyStart.copy( dollyEnd );
+
+					scope.update();
+					break;
+
+				case 3: // three-fingered touch: pan
+
+					if ( scope.enablePan === false ) return;
+					if ( state !== STATE.TOUCH_PAN ) return;
+
+					panEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+					panDelta.subVectors( panEnd, panStart );
+
+					pan( panDelta.x, panDelta.y );
+
+					panStart.copy( panEnd );
+
+					scope.update();
+					break;
+
+				default:
+
+					state = STATE.NONE;
+
+			}
+
+		}
+
+		function touchend( /* event */ ) {
+
+			if ( scope.enabled === false ) return;
+
+			scope.dispatchEvent( endEvent );
+			state = STATE.NONE;
+
+		}
+
+		function contextmenu( event ) {
+
+			event.preventDefault();
+
+		}
+
+		this.dispose = function() {
+
+			this.domElement.removeEventListener( 'contextmenu', contextmenu, false );
+			this.domElement.removeEventListener( 'mousedown', onMouseDown, false );
+			this.domElement.removeEventListener( 'mousewheel', onMouseWheel, false );
+			this.domElement.removeEventListener( 'MozMousePixelScroll', onMouseWheel, false ); // firefox
+
+			this.domElement.removeEventListener( 'touchstart', touchstart, false );
+			this.domElement.removeEventListener( 'touchend', touchend, false );
+			this.domElement.removeEventListener( 'touchmove', touchmove, false );
+
+			document.removeEventListener( 'mousemove', onMouseMove, false );
+			document.removeEventListener( 'mouseup', onMouseUp, false );
+
+			window.removeEventListener( 'keydown', onKeyDown, false );
+
+		}
+
+		this.domElement.addEventListener( 'contextmenu', contextmenu, false );
+
+		this.domElement.addEventListener( 'mousedown', onMouseDown, false );
+		this.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
+		this.domElement.addEventListener( 'MozMousePixelScroll', onMouseWheel, false ); // firefox
+
+		this.domElement.addEventListener( 'touchstart', touchstart, false );
+		this.domElement.addEventListener( 'touchend', touchend, false );
+		this.domElement.addEventListener( 'touchmove', touchmove, false );
+
+		window.addEventListener( 'keydown', onKeyDown, false );
+
+		// force an update at start
+		this.update();
+
+	};
+
+	OrbitControls.prototype = Object.create( THREE.EventDispatcher.prototype );
+	OrbitControls.prototype.constructor = OrbitControls;
+
+	Object.defineProperties( OrbitControls.prototype, {
+
+		object: {
+
+			get: function () {
+
+				return this.constraint.object;
+
+			}
+
+		},
+
+		target: {
+
+			get: function () {
+
+				return this.constraint.target;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: target is now immutable. Use target.set() instead.' );
+				this.constraint.target.copy( value );
+
+			}
+
+		},
+
+		minDistance : {
+
+			get: function () {
+
+				return this.constraint.minDistance;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.minDistance = value;
+
+			}
+
+		},
+
+		maxDistance : {
+
+			get: function () {
+
+				return this.constraint.maxDistance;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.maxDistance = value;
+
+			}
+
+		},
+
+		minZoom : {
+
+			get: function () {
+
+				return this.constraint.minZoom;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.minZoom = value;
+
+			}
+
+		},
+
+		maxZoom : {
+
+			get: function () {
+
+				return this.constraint.maxZoom;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.maxZoom = value;
+
+			}
+
+		},
+
+		minPolarAngle : {
+
+			get: function () {
+
+				return this.constraint.minPolarAngle;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.minPolarAngle = value;
+
+			}
+
+		},
+
+		maxPolarAngle : {
+
+			get: function () {
+
+				return this.constraint.maxPolarAngle;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.maxPolarAngle = value;
+
+			}
+
+		},
+
+		minAzimuthAngle : {
+
+			get: function () {
+
+				return this.constraint.minAzimuthAngle;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.minAzimuthAngle = value;
+
+			}
+
+		},
+
+		maxAzimuthAngle : {
+
+			get: function () {
+
+				return this.constraint.maxAzimuthAngle;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.maxAzimuthAngle = value;
+
+			}
+
+		},
+
+		enableDamping : {
+
+			get: function () {
+
+				return this.constraint.enableDamping;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.enableDamping = value;
+
+			}
+
+		},
+
+		dampingFactor : {
+
+			get: function () {
+
+				return this.constraint.dampingFactor;
+
+			},
+
+			set: function ( value ) {
+
+				this.constraint.dampingFactor = value;
+
+			}
+
+		},
+
+		// backward compatibility
+
+		noZoom: {
+
+			get: function () {
+
+				console.warn( 'THREE.OrbitControls: .noZoom has been deprecated. Use .enableZoom instead.' );
+				return ! this.enableZoom;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: .noZoom has been deprecated. Use .enableZoom instead.' );
+				this.enableZoom = ! value;
+
+			}
+
+		},
+
+		noRotate: {
+
+			get: function () {
+
+				console.warn( 'THREE.OrbitControls: .noRotate has been deprecated. Use .enableRotate instead.' );
+				return ! this.enableRotate;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: .noRotate has been deprecated. Use .enableRotate instead.' );
+				this.enableRotate = ! value;
+
+			}
+
+		},
+
+		noPan: {
+
+			get: function () {
+
+				console.warn( 'THREE.OrbitControls: .noPan has been deprecated. Use .enablePan instead.' );
+				return ! this.enablePan;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: .noPan has been deprecated. Use .enablePan instead.' );
+				this.enablePan = ! value;
+
+			}
+
+		},
+
+		noKeys: {
+
+			get: function () {
+
+				console.warn( 'THREE.OrbitControls: .noKeys has been deprecated. Use .enableKeys instead.' );
+				return ! this.enableKeys;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: .noKeys has been deprecated. Use .enableKeys instead.' );
+				this.enableKeys = ! value;
+
+			}
+
+		},
+
+		staticMoving : {
+
+			get: function () {
+
+				console.warn( 'THREE.OrbitControls: .staticMoving has been deprecated. Use .enableDamping instead.' );
+				return ! this.constraint.enableDamping;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: .staticMoving has been deprecated. Use .enableDamping instead.' );
+				this.constraint.enableDamping = ! value;
+
+			}
+
+		},
+
+		dynamicDampingFactor : {
+
+			get: function () {
+
+				console.warn( 'THREE.OrbitControls: .dynamicDampingFactor has been renamed. Use .dampingFactor instead.' );
+				return this.constraint.dampingFactor;
+
+			},
+
+			set: function ( value ) {
+
+				console.warn( 'THREE.OrbitControls: .dynamicDampingFactor has been renamed. Use .dampingFactor instead.' );
+				this.constraint.dampingFactor = value;
+
+			}
+
+		}
+
+	} );
+
+	return OrbitControls;
+}
+
+},{}],10:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -45714,4 +47704,4 @@ function animate() {
 	Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
-},{}]},{},[1]);
+},{}]},{},[4]);

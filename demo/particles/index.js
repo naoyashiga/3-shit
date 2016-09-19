@@ -22,7 +22,7 @@ class Viz {
     this.effectController = {
       showDots: true,
       showLines: true,
-      minDistance: 150,
+      minDistance: 100,
       limitConnections: false,
       maxConnections: 20,
       particleCount: 500
@@ -136,7 +136,8 @@ class Viz {
 
       this.pointCloud.positions[i * 3] = p.location.x
       this.pointCloud.positions[i * 3 + 1] = p.location.y
-      this.pointCloud.positions[i * 3 + 2] = p.location.z
+      this.pointCloud.positions[i * 3 + 2] = p.location.y
+      // this.pointCloud.positions[i * 3 + 2] = p.location.z
 
       p.borders()
 

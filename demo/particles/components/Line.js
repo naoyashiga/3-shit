@@ -32,11 +32,13 @@ export default class Line {
 
     this.positions[vertexpos++] = p.location.x
     this.positions[vertexpos++] = p.location.y
-    this.positions[vertexpos++] = p.location.z
+    this.positions[vertexpos++] = p.location.y
+    // this.positions[vertexpos++] = p.location.z
 
     this.positions[vertexpos++] = q.location.x
     this.positions[vertexpos++] = q.location.y
-    this.positions[vertexpos++] = q.location.z
+    this.positions[vertexpos++] = q.location.y
+    // this.positions[vertexpos++] = q.location.z
 
     this.colors[colorpos++] = alpha
     this.colors[colorpos++] = alpha

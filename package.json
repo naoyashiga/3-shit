@@ -8,6 +8,7 @@
     "babelify": "^7.3.0",
     "dat-gui": "^0.5.0",
     "glslify": "^5.0.0",
+    "immutable": "^3.8.1",
     "postprocessing": "^1.1.4",
     "stats.js": "^0.16.0",
     "three": "^0.80.1",
@@ -21,7 +22,7 @@
   },
   "scripts": {
     "start": "budo demo/index.js:bundle.js --live -- -t [babelify --presets es2015] -t glslify",
-    "build": "browserify demo/particles/index.js -o demo/particles/bundle.js -t [ babelify --presets [ es2015 ] ]",
+    "build": "browserify demo/trajectory/index.js -o demo/trajectory/bundle.js -t [ babelify --presets [ es2015 ] ]",
     "test": "standard"
   },
   "author": "naoyashiga",

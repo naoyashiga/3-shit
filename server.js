@@ -1,7 +1,7 @@
 var budo = require('budo')
 var babelify = require('babelify')
 
-var workingDir = "./demo/particles";
+var workingDir = "./demo/trajectory";
 
 budo(workingDir + '/index.js', {
   serve : "bundle.js",

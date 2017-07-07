@@ -2,7 +2,7 @@ const THREE = require('three')
 import Particle from './Particle'
 import MidPointParticle from './MidPointParticle'
 
-export default class PointCloud {
+export default class TrajectoryPointCloud {
   constructor(maxParticleCount) {
 
     this.maxParticleCount = maxParticleCount
@@ -11,8 +11,8 @@ export default class PointCloud {
     this.particles = new THREE.BufferGeometry()
 
     this.material = new THREE.PointsMaterial({
-      color: 0xE70000,
-      size: 15,
+      color: 0x3498DB,
+      size: 5,
       blending: THREE.AdditiveBlending,
       transparent: true,
       sizeAttenuation: false
@@ -29,14 +29,7 @@ export default class PointCloud {
 
   getParticles(particles) {
     for (let i = 0; i < this.maxParticleCount; i++) {
-      let p = null
-
-      if(i == 2) {
-        p = new MidPointParticle(particles[0].location, particles[1].location)
-
-      } else {
-        p = new Particle()
-      }
+      const p = new Particle()
 
       this.positions[i * 3] = p.location.x
       this.positions[i * 3 + 1] = p.location.y
@@ -46,7 +39,6 @@ export default class PointCloud {
     }
 
     return particles
-
   }
 
 

@@ -4,9 +4,12 @@ import Stats from 'stats.js'
 import dat from 'dat-gui'
 
 import PointCloud from './components/PointCloud'
+import TrajectoryPointCloud from './components/TrajectoryPointCloud'
 import Line from './components/Line'
 
 const OrbitControls = require('three-orbit-controls')(THREE)
+
+let counter = 0
 
 class Viz {
   constructor() {
@@ -16,6 +19,8 @@ class Viz {
     this.particleCount = n
     this.maxParticleCount = n
     this.particles = []
+    this.trajectoryParticles = []
+    this.trajectoryParticlesCount = 5000
     this.r = 800
 
     this.group = new THREE.Group()
@@ -23,7 +28,7 @@ class Viz {
     this.effectController = {
       showDots: true,
       showLines: true,
-      minDistance: 100,
+      minDistance: 1000,
       maxConnections: 20,
       particleCount: 500
     }
@@ -41,7 +46,12 @@ class Viz {
     this.particles = this.pointCloud.getParticles(this.particles)
     this.pointCloud.setup()
 
-    // this.line = new Line(this.maxParticleCount)
+    this.trajectoryPointCloud = new TrajectoryPointCloud(this.trajectoryParticlesCount)
+    console.log(this.trajectoryPointCloud);
+    this.trajectoryParticles = this.trajectoryPointCloud.getParticles(this.trajectoryParticles)
+    this.trajectoryPointCloud.setup()
+
+    this.line = new Line(this.maxParticleCount)
 
     this.addToGroup()
 
@@ -99,7 +109,8 @@ class Viz {
   addToGroup() {
     this.group.add(this.createBoxHelper())
     this.group.add(this.pointCloud.cloud)
-    // this.group.add(this.line.mesh)
+    this.group.add(this.trajectoryPointCloud.cloud)
+    this.group.add(this.line.mesh)
   }
 
   addRenderer() {
@@ -121,15 +132,22 @@ class Viz {
 
 
 
+
   animate() {
+
+    if(counter > this.trajectoryParticlesCount) {
+      counter = 0
+    }
+    counter++
+    // console.log(counter);
 
     let vertexpos = 0;
     let colorpos = 0;
     let numConnected = 0;
 
-    // this.particles.forEach((p) => {
-    //   p.numConnections = 0
-    // })
+    this.particles.forEach((p) => {
+      p.numConnections = 0
+    })
 
     for(let i = 0; i < this.particleCount; i++) {
 
@@ -137,6 +155,15 @@ class Viz {
 
       if(i == 2) {
         p.update(this.particles[0].location, this.particles[1].location)
+
+        // var geometry = new THREE.BoxGeometry(1, 1, 1);
+        // var material = new THREE.MeshBasicMaterial( {color: 0xFD6378} );
+        // var cube = new THREE.Mesh(geometry, material);
+        // cube.position.set(p.location.x, p.location.y, p.location.z);
+        // this.scene.add(cube);
+
+        this.trajectoryPointCloud.positions[counter * 3] = p.location.x
+        this.trajectoryPointCloud.positions[counter * 3 + 1] = p.location.y
 
       } else {
         p.update()
@@ -149,43 +176,48 @@ class Viz {
 
       p.borders()
 
-      // if (p.numConnections >= this.effectController.maxConnections ) {
-      //   continue
-      // }
+      if (p.numConnections >= this.effectController.maxConnections ) {
+        continue
+      }
 
-      // for (let j = i + 1; j < this.particleCount; j++ ) {
-      //
-      //   const q = this.particles[j]
-      //
-      //   if (q.numConnections >= this.effectController.maxConnections) {
-      //     continue
-      //   }
-      //
-      //   const dist = p.location.distanceTo(q.location)
-      //
-      //   if (dist < this.effectController.minDistance) {
-      //
-      //     p.numConnections++
-      //     q.numConnections++
-      //
-      //     let alpha = 1.0 - dist / this.effectController.minDistance
-      //
-      //     // this.line.update(vertexpos, colorpos, alpha, p, q, i, j)
-      //
-      //     vertexpos += 6
-      //     colorpos += 6
-      //
-      //     numConnected++
-      //   }
-      // }
+      for (let j = i + 1; j < this.particleCount; j++ ) {
+
+        if(j == 2) {
+          break
+        }
+
+        const q = this.particles[j]
+
+        if (q.numConnections >= this.effectController.maxConnections) {
+          continue
+        }
+
+        const dist = p.location.distanceTo(q.location)
+
+        if (dist < this.effectController.minDistance) {
+
+          p.numConnections++
+          q.numConnections++
+
+          let alpha = 1.0 - dist / this.effectController.minDistance
+
+          this.line.update(vertexpos, colorpos, alpha, p, q, i, j)
+
+          vertexpos += 6
+          colorpos += 6
+
+          numConnected++
+        }
+      }
     }
 
 
-    // this.line.mesh.geometry.setDrawRange(0, numConnected * 2)
-    // this.line.mesh.geometry.attributes.position.needsUpdate = true
-    // this.line.mesh.geometry.attributes.color.needsUpdate = true
+    this.line.mesh.geometry.setDrawRange(0, numConnected * 2)
+    this.line.mesh.geometry.attributes.position.needsUpdate = true
+    this.line.mesh.geometry.attributes.color.needsUpdate = true
 
     this.pointCloud.cloud.geometry.attributes.position.needsUpdate = true
+    this.trajectoryPointCloud.cloud.geometry.attributes.position.needsUpdate = true
 
     requestAnimationFrame(this.animate.bind(this))
 
@@ -197,7 +229,7 @@ class Viz {
   render() {
     const time = Date.now() * 0.001
 
-    this.group.rotation.y = time * 0.1
+    // this.group.rotation.y = time * 0.1
     this.renderer.render(this.scene, this.camera)
   }
 }

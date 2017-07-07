@@ -4,7 +4,7 @@ const THREE = require('three')
 export default class Particle {
   constructor() {
     this.radius = 800
-    this.speed = 10 + Math.random() * 2
+    this.speed = 2 + Math.random() * 10
 
     this.location = new THREE.Vector3(
       this.radius / 2,

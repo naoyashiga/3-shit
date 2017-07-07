@@ -44,13 +44,13 @@ var Line = function () {
 
       this.positions[vertexpos++] = p.location.x;
       this.positions[vertexpos++] = p.location.y;
-      this.positions[vertexpos++] = p.location.y;
-      // this.positions[vertexpos++] = p.location.z
+      // this.positions[vertexpos++] = p.location.y
+      this.positions[vertexpos++] = p.location.z;
 
       this.positions[vertexpos++] = q.location.x;
       this.positions[vertexpos++] = q.location.y;
-      this.positions[vertexpos++] = q.location.y;
-      // this.positions[vertexpos++] = q.location.z
+      // this.positions[vertexpos++] = q.location.y
+      this.positions[vertexpos++] = q.location.z;
 
       this.colors[colorpos++] = alpha;
       this.colors[colorpos++] = alpha;
@@ -67,7 +67,52 @@ var Line = function () {
 
 exports.default = Line;
 
-},{"three":10}],2:[function(require,module,exports){
+},{"three":12}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var THREE = require('three');
+
+var MidPointParticle = function () {
+  function MidPointParticle(p, q) {
+    _classCallCheck(this, MidPointParticle);
+
+    var l1 = new THREE.Vector3().copy(p);
+    var l2 = new THREE.Vector3().copy(q);
+
+    this.location = l1.add(l2).divideScalar(2.0);
+    this.location.z = p.z;
+  }
+
+  _createClass(MidPointParticle, [{
+    key: 'update',
+    value: function update(p, q) {
+      var l1 = new THREE.Vector3().copy(p);
+      var l2 = new THREE.Vector3().copy(q);
+
+      this.location = l1.add(l2).divideScalar(2.0);
+      this.location.z = p.z;
+    }
+  }, {
+    key: 'borders',
+    value: function borders() {
+      // const rHalf = this.radius / 2
+    }
+  }]);
+
+  return MidPointParticle;
+}();
+
+exports.default = MidPointParticle;
+
+},{"three":12}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -85,10 +130,16 @@ var Particle = function () {
     _classCallCheck(this, Particle);
 
     this.radius = 800;
+    this.speed = 2 + Math.random() * 10;
 
-    this.location = new THREE.Vector3(Math.random() * this.radius - this.radius / 2, Math.random() * this.radius - this.radius / 2, Math.random() * this.radius - this.radius / 2);
+    this.location = new THREE.Vector3(this.radius / 2, this.radius / 2, this.radius / 2
+    //  Math.random() * this.radius - this.radius / 2,
+    //  Math.random() * this.radius - this.radius / 2,
+    //  Math.random() * this.radius - this.radius / 2
+    );
 
-    this.velocity = new THREE.Vector3(-1 + Math.random() * 2, -1 + Math.random() * 2, -1 + Math.random() * 2);
+    this.velocity = new THREE.Vector3(this.speed, 0, 0);
+    // this.velocity = new THREE.Vector3( -1 + Math.random() * 2, -1 + Math.random() * 2,  -1 + Math.random() * 2 )
 
     this.numConnections = 0;
   }
@@ -102,16 +153,33 @@ var Particle = function () {
     key: 'borders',
     value: function borders() {
       var rHalf = this.radius / 2;
-      if (this.location.y < -rHalf || this.location.y > rHalf) {
-        this.velocity.y *= -1;
+
+      if (this.location.x > rHalf && this.velocity.x != 0) {
+        this.velocity.x = 0;
+        this.velocity.y = -this.speed;
+
+        this.location.x = rHalf;
       }
 
-      if (this.location.x < -rHalf || this.location.x > rHalf) {
-        this.velocity.x *= -1;
+      if (this.location.y < -rHalf && this.velocity.y != 0) {
+        this.velocity.y = 0;
+        this.velocity.x = -this.speed;
+
+        this.location.y = -rHalf;
       }
 
-      if (this.location.z < -rHalf || this.location.z > rHalf) {
-        this.velocity.z *= -1;
+      if (this.location.x < -rHalf && this.velocity.x != 0) {
+        this.velocity.x = 0;
+        this.velocity.y = this.speed;
+
+        this.location.x = -rHalf;
+      }
+
+      if (this.location.y > rHalf && this.velocity.y != 0) {
+        this.velocity.y = 0;
+        this.velocity.x = this.speed;
+
+        this.location.y = rHalf;
       }
     }
   }]);
@@ -121,7 +189,7 @@ var Particle = function () {
 
 exports.default = Particle;
 
-},{"three":10}],3:[function(require,module,exports){
+},{"three":12}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -133,6 +201,10 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _Particle = require('./Particle');
 
 var _Particle2 = _interopRequireDefault(_Particle);
+
+var _MidPointParticle = require('./MidPointParticle');
+
+var _MidPointParticle2 = _interopRequireDefault(_MidPointParticle);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -150,8 +222,8 @@ var PointCloud = function () {
     this.particles = new THREE.BufferGeometry();
 
     this.material = new THREE.PointsMaterial({
-      color: 0xFFFFFF,
-      size: 3,
+      color: 0xE70000,
+      size: 15,
       blending: THREE.AdditiveBlending,
       transparent: true,
       sizeAttenuation: false
@@ -163,8 +235,84 @@ var PointCloud = function () {
   _createClass(PointCloud, [{
     key: 'setup',
     value: function setup() {
-      var particleCount = 300;
-      this.particles.setDrawRange(0, particleCount);
+      this.particles.setDrawRange(0, this.maxParticleCount);
+      this.particles.addAttribute('position', new THREE.BufferAttribute(this.positions, 3).setDynamic(true));
+    }
+  }, {
+    key: 'getParticles',
+    value: function getParticles(particles) {
+      for (var i = 0; i < this.maxParticleCount; i++) {
+        var p = null;
+
+        if (i == 2) {
+          p = new _MidPointParticle2.default(particles[0].location, particles[1].location);
+        } else {
+          p = new _Particle2.default();
+        }
+
+        this.positions[i * 3] = p.location.x;
+        this.positions[i * 3 + 1] = p.location.y;
+        this.positions[i * 3 + 2] = p.location.z;
+
+        particles.push(p);
+      }
+
+      return particles;
+    }
+  }]);
+
+  return PointCloud;
+}();
+
+exports.default = PointCloud;
+
+},{"./MidPointParticle":2,"./Particle":3,"three":12}],5:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Particle = require('./Particle');
+
+var _Particle2 = _interopRequireDefault(_Particle);
+
+var _MidPointParticle = require('./MidPointParticle');
+
+var _MidPointParticle2 = _interopRequireDefault(_MidPointParticle);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var THREE = require('three');
+
+var TrajectoryPointCloud = function () {
+  function TrajectoryPointCloud(maxParticleCount) {
+    _classCallCheck(this, TrajectoryPointCloud);
+
+    this.maxParticleCount = maxParticleCount;
+
+    this.positions = new Float32Array(maxParticleCount * 3);
+    this.particles = new THREE.BufferGeometry();
+
+    this.material = new THREE.PointsMaterial({
+      color: 0x3498DB,
+      size: 5,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      sizeAttenuation: false
+    });
+
+    this.cloud = new THREE.Points(this.particles, this.material);
+  }
+
+  _createClass(TrajectoryPointCloud, [{
+    key: 'setup',
+    value: function setup() {
+      this.particles.setDrawRange(0, this.maxParticleCount);
       this.particles.addAttribute('position', new THREE.BufferAttribute(this.positions, 3).setDynamic(true));
     }
   }, {
@@ -184,12 +332,12 @@ var PointCloud = function () {
     }
   }]);
 
-  return PointCloud;
+  return TrajectoryPointCloud;
 }();
 
-exports.default = PointCloud;
+exports.default = TrajectoryPointCloud;
 
-},{"./Particle":2,"three":10}],4:[function(require,module,exports){
+},{"./MidPointParticle":2,"./Particle":3,"three":12}],6:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -206,6 +354,10 @@ var _PointCloud = require('./components/PointCloud');
 
 var _PointCloud2 = _interopRequireDefault(_PointCloud);
 
+var _TrajectoryPointCloud = require('./components/TrajectoryPointCloud');
+
+var _TrajectoryPointCloud2 = _interopRequireDefault(_TrajectoryPointCloud);
+
 var _Line = require('./components/Line');
 
 var _Line2 = _interopRequireDefault(_Line);
@@ -218,15 +370,20 @@ var THREE = require('three');
 
 var OrbitControls = require('three-orbit-controls')(THREE);
 
+var counter = 0;
+
 var Viz = function () {
   function Viz() {
     _classCallCheck(this, Viz);
 
     this.w = window.innerWidth;
     this.h = window.innerHeight;
-    this.particleCount = 300;
-    this.maxParticleCount = 1000;
+    var n = 3;
+    this.particleCount = n;
+    this.maxParticleCount = n;
     this.particles = [];
+    this.trajectoryParticles = [];
+    this.trajectoryParticlesCount = 5000;
     this.r = 800;
 
     this.group = new THREE.Group();
@@ -234,7 +391,7 @@ var Viz = function () {
     this.effectController = {
       showDots: true,
       showLines: true,
-      minDistance: 100,
+      minDistance: 1000,
       maxConnections: 20,
       particleCount: 500
     };
@@ -251,6 +408,11 @@ var Viz = function () {
     this.particles = this.pointCloud.getParticles(this.particles);
     this.pointCloud.setup();
 
+    this.trajectoryPointCloud = new _TrajectoryPointCloud2.default(this.trajectoryParticlesCount);
+    console.log(this.trajectoryPointCloud);
+    this.trajectoryParticles = this.trajectoryPointCloud.getParticles(this.trajectoryParticles);
+    this.trajectoryPointCloud.setup();
+
     this.line = new _Line2.default(this.maxParticleCount);
 
     this.addToGroup();
@@ -258,7 +420,7 @@ var Viz = function () {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.addRenderer();
 
-    this.initGUI();
+    // this.initGUI()
 
     this.stats = new _stats2.default();
     this.addStats();
@@ -277,18 +439,17 @@ var Viz = function () {
         _this.pointCloud.cloud.visible = value;
       });
 
-      gui.add(this.effectController, "showLines").onChange(function (value) {
-        _this.line.mesh.visible = value;
-      });
+      // gui.add(this.effectController, "showLines" ).onChange((value) => { this.line.mesh.visible = value; })
 
       gui.add(this.effectController, "minDistance", 10, 300);
       gui.add(this.effectController, "maxConnections", 0, 30, 1);
 
-      gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1).onChange(function (value) {
-
-        _this.particleCount = parseInt(value);
-        _this.pointCloud.particles.setDrawRange(0, _this.particleCount);
-      });
+      // gui.add(this.effectController, "particleCount", 0, this.maxParticleCount, 1).onChange((value) => {
+      //
+      //   this.particleCount = parseInt(value)
+      //   this.pointCloud.particles.setDrawRange(0, this.particleCount)
+      //
+      // })
     }
   }, {
     key: 'onWindowResize',
@@ -318,6 +479,7 @@ var Viz = function () {
     value: function addToGroup() {
       this.group.add(this.createBoxHelper());
       this.group.add(this.pointCloud.cloud);
+      this.group.add(this.trajectoryPointCloud.cloud);
       this.group.add(this.line.mesh);
     }
   }, {
@@ -344,6 +506,12 @@ var Viz = function () {
     key: 'animate',
     value: function animate() {
 
+      if (counter > this.trajectoryParticlesCount) {
+        counter = 0;
+      }
+      counter++;
+      // console.log(counter);
+
       var vertexpos = 0;
       var colorpos = 0;
       var numConnected = 0;
@@ -356,11 +524,24 @@ var Viz = function () {
 
         var p = this.particles[i];
 
-        p.update();
+        if (i == 2) {
+          p.update(this.particles[0].location, this.particles[1].location);
+
+          // var geometry = new THREE.BoxGeometry(1, 1, 1);
+          // var material = new THREE.MeshBasicMaterial( {color: 0xFD6378} );
+          // var cube = new THREE.Mesh(geometry, material);
+          // cube.position.set(p.location.x, p.location.y, p.location.z);
+          // this.scene.add(cube);
+
+          this.trajectoryPointCloud.positions[counter * 3] = p.location.x;
+          this.trajectoryPointCloud.positions[counter * 3 + 1] = p.location.y;
+        } else {
+          p.update();
+        }
 
         this.pointCloud.positions[i * 3] = p.location.x;
         this.pointCloud.positions[i * 3 + 1] = p.location.y;
-        this.pointCloud.positions[i * 3 + 2] = p.location.y;
+        // this.pointCloud.positions[i * 3 + 2] = p.location.y
         // this.pointCloud.positions[i * 3 + 2] = p.location.z
 
         p.borders();
@@ -370,6 +551,10 @@ var Viz = function () {
         }
 
         for (var j = i + 1; j < this.particleCount; j++) {
+
+          if (j == 2) {
+            break;
+          }
 
           var q = this.particles[j];
 
@@ -401,6 +586,7 @@ var Viz = function () {
       this.line.mesh.geometry.attributes.color.needsUpdate = true;
 
       this.pointCloud.cloud.geometry.attributes.position.needsUpdate = true;
+      this.trajectoryPointCloud.cloud.geometry.attributes.position.needsUpdate = true;
 
       requestAnimationFrame(this.animate.bind(this));
 
@@ -412,7 +598,7 @@ var Viz = function () {
     value: function render() {
       var time = Date.now() * 0.001;
 
-      this.group.rotation.y = time * 0.1;
+      // this.group.rotation.y = time * 0.1
       this.renderer.render(this.scene, this.camera);
     }
   }]);
@@ -424,10 +610,10 @@ var viz = new Viz();
 
 viz.animate();
 
-},{"./components/Line":1,"./components/PointCloud":3,"dat-gui":5,"stats.js":8,"three":10,"three-orbit-controls":9}],5:[function(require,module,exports){
+},{"./components/Line":1,"./components/PointCloud":4,"./components/TrajectoryPointCloud":5,"dat-gui":7,"stats.js":10,"three":12,"three-orbit-controls":11}],7:[function(require,module,exports){
 module.exports = require('./vendor/dat.gui')
 module.exports.color = require('./vendor/dat.color')
-},{"./vendor/dat.color":6,"./vendor/dat.gui":7}],6:[function(require,module,exports){
+},{"./vendor/dat.color":8,"./vendor/dat.gui":9}],8:[function(require,module,exports){
 /**
  * dat-gui JavaScript Controller Library
  * http://code.google.com/p/dat-gui
@@ -1183,7 +1369,7 @@ dat.color.math = (function () {
 })(),
 dat.color.toString,
 dat.utils.common);
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 /**
  * dat-gui JavaScript Controller Library
  * http://code.google.com/p/dat-gui
@@ -4844,14 +5030,14 @@ dat.dom.CenteredDiv = (function (dom, common) {
 dat.utils.common),
 dat.dom.dom,
 dat.utils.common);
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // stats.js - http://github.com/mrdoob/stats.js
 var Stats=function(){function h(a){c.appendChild(a.dom);return a}function k(a){for(var d=0;d<c.children.length;d++)c.children[d].style.display=d===a?"block":"none";l=a}var l=0,c=document.createElement("div");c.style.cssText="position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000";c.addEventListener("click",function(a){a.preventDefault();k(++l%c.children.length)},!1);var g=(performance||Date).now(),e=g,a=0,r=h(new Stats.Panel("FPS","#0ff","#002")),f=h(new Stats.Panel("MS","#0f0","#020"));
 if(self.performance&&self.performance.memory)var t=h(new Stats.Panel("MB","#f08","#201"));k(0);return{REVISION:16,dom:c,addPanel:h,showPanel:k,begin:function(){g=(performance||Date).now()},end:function(){a++;var c=(performance||Date).now();f.update(c-g,200);if(c>e+1E3&&(r.update(1E3*a/(c-e),100),e=c,a=0,t)){var d=performance.memory;t.update(d.usedJSHeapSize/1048576,d.jsHeapSizeLimit/1048576)}return c},update:function(){g=this.end()},domElement:c,setMode:k}};
 Stats.Panel=function(h,k,l){var c=Infinity,g=0,e=Math.round,a=e(window.devicePixelRatio||1),r=80*a,f=48*a,t=3*a,u=2*a,d=3*a,m=15*a,n=74*a,p=30*a,q=document.createElement("canvas");q.width=r;q.height=f;q.style.cssText="width:80px;height:48px";var b=q.getContext("2d");b.font="bold "+9*a+"px Helvetica,Arial,sans-serif";b.textBaseline="top";b.fillStyle=l;b.fillRect(0,0,r,f);b.fillStyle=k;b.fillText(h,t,u);b.fillRect(d,m,n,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d,m,n,p);return{dom:q,update:function(f,
 v){c=Math.min(c,f);g=Math.max(g,f);b.fillStyle=l;b.globalAlpha=1;b.fillRect(0,0,r,m);b.fillStyle=k;b.fillText(e(f)+" "+h+" ("+e(c)+"-"+e(g)+")",t,u);b.drawImage(q,d+a,m,n-a,p,d,m,n-a,p);b.fillRect(d+n-a,m,a,p);b.fillStyle=l;b.globalAlpha=.9;b.fillRect(d+n-a,m,a,e((1-f/v)*p))}}};"object"===typeof module&&(module.exports=Stats);
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 module.exports = function(THREE) {
 	var MOUSE = THREE.MOUSE
 	if (!MOUSE)
@@ -5972,7 +6158,7 @@ module.exports = function(THREE) {
 	return OrbitControls;
 }
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -47709,4 +47895,4 @@ module.exports = function(THREE) {
 	Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
-},{}]},{},[4]);
+},{}]},{},[6]);
